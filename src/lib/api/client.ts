@@ -356,10 +356,10 @@ export const initialOrders: OrderPaymentDTO[] = [
   },
 ];
 
-import apiWorker from '../../../apps/api/src/index.js';
+import { apiGateway } from '../../../services/api-gateway/src/index.js';
 
 /**
- * Direct invoker for the Cloudflare Worker API
+ * Direct invoker for the Cloudflare Microservices API Gateway
  */
 export async function executeWorkerApi(
   path: string,
@@ -381,7 +381,7 @@ export async function executeWorkerApi(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const res = await apiWorker.fetch(req, { ENVIRONMENT: 'production', API_VERSION: 'v1' }, {});
+  const res = await apiGateway.fetch(req);
   const data = await res.json();
   return { status: res.status, ok: res.ok, data };
 }

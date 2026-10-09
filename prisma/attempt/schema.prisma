@@ -1,0 +1,97 @@
+// Prisma Schema for Quiz Attempt Service
+// Database: attempt_db (Hostinger MySQL 8.0)
+// Independent microservice schema — NO cross-database relations
+// Foreign entities (userId, quizId, questionId) referenced as scalar VarChar(30) strings
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("ATTEMPT_DATABASE_URL")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+  ABANDONED
+}
+
+model QuizAttempt {
+  id               String        @id @default(cuid()) @db.VarChar(30)
+  userId           String        @db.VarChar(30) // External reference to auth_db.users.id
+  quizId           String        @db.VarChar(30) // External reference to quiz_db.quizzes.id
+  status           AttemptStatus @default(IN_PROGRESS)
+  requestId        String?       @unique @db.VarChar(191) // Idempotency key
+  startedAt        DateTime      @default(now())
+  submittedAt      DateTime?
+  expiresAt        DateTime?
+  totalQuestions   Int
+  correctCount     Int           @default(0)
+  wrongCount       Int           @default(0)
+  unansweredCount  Int           @default(0)
+  score            Float         @default(0)
+  maxScore         Float         @default(0)
+  percentage       Float         @default(0)
+  timeTakenSeconds Int?
+
+  answers AttemptAnswer[]
+
+  @@index([userId, startedAt])
+  @@index([quizId, status, submittedAt])
+  @@index([userId, quizId, status])
+  @@map("quiz_attempts")
+}
+
+model AttemptAnswer {
+  id               String   @id @default(cuid()) @db.VarChar(30)
+  attemptId        String   @db.VarChar(30)
+  questionId       String   @db.VarChar(30) // External reference to quiz_db.questions.id
+  selectedOptionId String?  @db.VarChar(30) // External reference to quiz_db.options.id
+  isCorrect        Boolean?
+  marksAwarded     Float    @default(0)
+  timeTakenSeconds Int?
+  answeredAt       DateTime @default(now())
+
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId, isCorrect])
+  @@index([questionId])
+  @@map("attempt_answers")
+}
+
+model Bookmark {
+  userId     String   @db.VarChar(30) // External reference to auth_db.users.id
+  questionId String   @db.VarChar(30) // External reference to quiz_db.questions.id
+  createdAt  DateTime @default(now())
+
+  @@id([userId, questionId])
+  @@index([questionId])
+  @@map("bookmarks")
+}
+
+model SavedQuiz {
+  userId    String   @db.VarChar(30) // External reference to auth_db.users.id
+  quizId    String   @db.VarChar(30) // External reference to quiz_db.quizzes.id
+  createdAt DateTime @default(now())
+
+  @@id([userId, quizId])
+  @@index([quizId])
+  @@map("saved_quizzes")
+}
+
+model OfflineSync {
+  id          String    @id @default(cuid()) @db.VarChar(30)
+  userId      String    @db.VarChar(30) // External reference to auth_db.users.id
+  syncKey     String    @db.VarChar(191) // Client SQLite unique UUID
+  status      String    @default("PENDING") @db.VarChar(30)
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([userId, syncKey])
+  @@index([userId, status])
+  @@map("offline_sync_records")
+}

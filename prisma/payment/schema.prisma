@@ -1,0 +1,77 @@
+// Prisma Schema for Payment & Billing Service
+// Database: payment_db (Hostinger MySQL 8.0)
+// Independent microservice schema — NO cross-database relations
+// Foreign entities (userId, quizId) referenced as scalar VarChar(30) strings
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("PAYMENT_DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id             String      @id @default(cuid()) @db.VarChar(30)
+  userId         String      @db.VarChar(30) // External reference to auth_db.users.id
+  quizId         String      @db.VarChar(30) // External reference to quiz_db.quizzes.id
+  amount         Int         // Integer minor unit (Paisa) or Taka
+  currency       String      @default("BDT") @db.VarChar(3)
+  status         OrderStatus @default(PENDING)
+  idempotencyKey String?     @unique @db.VarChar(191)
+  createdAt      DateTime    @default(now())
+  paidAt         DateTime?
+
+  payments Payment[]
+
+  @@index([userId, createdAt])
+  @@index([quizId, status])
+  @@map("orders")
+}
+
+model Payment {
+  id                String        @id @default(cuid()) @db.VarChar(30)
+  orderId           String        @db.VarChar(30)
+  provider          String        @db.VarChar(50) // "SSLCOMMERZ" | "AAMARPAY"
+  providerReference String?       @db.VarChar(191) // Gateway transaction identifier
+  status            PaymentStatus @default(PENDING)
+  amount            Int
+  currency          String        @default("BDT") @db.VarChar(3)
+  createdAt         DateTime      @default(now())
+  paidAt            DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerReference])
+  @@index([orderId, status])
+  @@map("payments")
+}
+
+model QuizAccess {
+  id        String    @id @default(cuid()) @db.VarChar(30)
+  userId    String    @db.VarChar(30) // External reference to auth_db.users.id
+  quizId    String    @db.VarChar(30) // External reference to quiz_db.quizzes.id
+  orderId   String?   @db.VarChar(30)
+  grantedAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@unique([userId, quizId])
+  @@index([userId, expiresAt])
+  @@map("quiz_access_grants")
+}

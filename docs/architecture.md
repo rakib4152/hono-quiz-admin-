@@ -1,67 +1,64 @@
-# Architecture Specification: Scalable Quiz Platform
+# Microservices Architecture: Scalable Paid Quiz Platform
 
-## 1. System Architecture Diagram
+## 1. System Topology Diagram
 
 ```
-+---------------------------------------------------------------------------------------------------+
-|                                          CLIENTS                                                  |
-|                                                                                                   |
-|   +------------------------------------+          +-------------------------------------------+   |
-|   |   Next.js 15 Admin / Web Portal    |          |   Expo Mobile App (React Native + TS)     |   |
-|   |   (Tailwind CSS, TanStack Query)   |          |   - Offline SQLite Cache & Sync Queue     |   |
-|   |   Hosted: Hostinger VPS / Standalone|          |   - SecureStore for Tokens & Sessions     |   |
-|   +-----------------+------------------+          +---------------------+---------------------+   |
-+---------------------|---------------------------------------------------|-------------------------+
-                      | HTTPS (JWT / Secure Cookie)                       | HTTPS (Bearer Token)
-                      v                                                   v
-+---------------------------------------------------------------------------------------------------+
-|                                  CLOUDFLARE EDGE NETWORK                                          |
-|                                                                                                   |
-|   [ Cloudflare DNS + DDoS Protection + WAF + Turnstile Anti-Abuse (api.example.com) ]             |
-|                                                     |                                             |
-|                                                     v                                             |
-|   +-------------------------------------------------------------------------------------------+   |
-|   |                          CLOUDFLARE WORKERS (Hono Framework)                              |   |
-|   |                                                                                           |   |
-|   |   - Route Engine: Hono v4 (TypeScript, /api/v1 router)                                    |   |
-|   |   - Middlewares: CORS, Request ID, Secure Auth, Rate Limiter, Zod Validation, OpenAPI     |   |
-|   |   - Business Modules: Auth, Users, Catalog, Quizzes, Attempts, Scoring, Payments, Sync    |   |
-|   |   - ORM: Prisma ORM with Workers MySQL Driver Adapter (`mariadb` / `mysql2`)              |   |
-|   +----------+--------------------+--------------------+--------------------+-----------------+   |
-|              |                    |                    |                    |                     |
-|              v                    v                    v                    v                     |
-|     +-----------------+  +-----------------+  +-----------------+  +------------------+           |
-|     |  Cloudflare KV  |  |  Cloudflare R2  |  |Cloudflare Queues|  | Cloudflare       |           |
-|     |  - Session Cache|  |  - Question Img |  |  - Async Scoring|  | HYPERDRIVE       |           |
-|     |  - Rate Limits  |  |  - Media Assets |  |  - Batch Sync   |  | (Pooling & Proxy)|           |
-|     |  - Token Revoke |  |  - CSV Exports  |  |  - Email Alerts |  +--------+---------+           |
-|     +-----------------+  +-----------------+  +-----------------+           |                     |
-+-----------------------------------------------------------------------------|---------------------+
-                                                                              | Persistent TCP Pool
-                                                                              | TLS 1.3 / Port 3306
-                                                                              v
-+---------------------------------------------------------------------------------------------------+
-|                                    HOSTINGER INFRASTRUCTURE                                       |
-|                                                                                                   |
-|   +-------------------------------------------------------------------------------------------+   |
-|   |                           Hostinger Remote MySQL Database                                 |   |
-|   |   - Engine: MySQL 8.0.x InnoDB                                                            |   |
-|   |   - Network: Port 3306 exposed strictly to Cloudflare Hyperdrive IP ranges / TLS required |   |
-|   |   - Strict connection budgeting: max_user_connections managed by Hyperdrive pooling       |   |
-|   |   - Storage: Persistent InnoDB tables with compound indexing, B-Trees, UTF8MB4 (Bangla)   |   |
-|   +-------------------------------------------------------------------------------------------+   |
-+---------------------------------------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------------------------------------+
+|                                                      CLIENTS                                                          |
+|                                                                                                                       |
+|   +------------------------------------+                                  +---------------------------------------+   |
+|   |    Next.js 15 Web & Admin Panel    |                                  |   Expo React Native Mobile Client     |   |
+|   |   (shadcn/ui, Tailwind CSS, TanStack)                                 |   - Local SQLite Schema & Sync Queue  |   |
+|   +-----------------+------------------+                                  +-------------------+-------------------+   |
++---------------------|-------------------------------------------------------------------------|-----------------------+
+                      | HTTPS (Bearer Token / Cookie)                                           | HTTPS (Bearer Token)
+                      v                                                                         v
++-----------------------------------------------------------------------------------------------------------------------+
+|                                             CLOUDFLARE API GATEWAY WORKER                                             |
+|                                                                                                                       |
+|   - Base Prefix: /api/v1/*                                                                                            |
+|   - Correlation ID: X-Correlation-ID injection                                                                        |
+|   - Authentication: Session token validation via auth-service                                                         |
+|   - Rate Limiter: Sliding-window rate limiting per IP / User                                                          |
+|   - OpenAPI 3.0: Public Swagger documentation endpoint                                                                |
++---------+--------------------+-------------------------+------------------------+-------------------+-----------------+
+          |                    |                         |                        |                   |
+          | HTTP (Internal)    | HTTP (Internal)         | HTTP (Internal)        | HTTP (Internal)   | HTTP (Internal)
+          v                    v                         v                        v                   v
++------------------+ +------------------+      +-------------------+    +-------------------+ +-------------------+
+|   AUTH SERVICE   | |   QUIZ CONTENT   |      |  ATTEMPT SERVICE  |    |  PAYMENT SERVICE  | | ANALYTICS SERVICE |
+| (Cloudflare Wkr) | | (Cloudflare Wkr) |      | (Cloudflare Wkr)  |    | (Cloudflare Wkr)  | | (Cloudflare Wkr)  |
+|                  | |                  |      |                   |    |                   | |                   |
+| - Register/Login | | - Category/Exam  |      | - Timed Attempts  |    | - Orders (BDT)    | | - Leaderboards    |
+| - Sessions/RBAC  | | - Subjects/Topic |      | - Scoring Engine  |    | - SSLCommerz      | | - User Badges     |
+| - Devices        | | - Quizzes & Qs   |      | - Negative Marks  |    | - aamarPay        | | - Streaks/Points  |
+| - Token Verify   | | - Offline Pkg    |      | - Offline Sync    |    | - QuizAccess      | | - Tie-breaking    |
++--------+---------+ +--------+---------+      +---------+---------+    +---------+---------+ +---------+---------+
+         |                    |                          |                        |                     |
+         | Hyperdrive Pool    | Hyperdrive Pool          | Hyperdrive Pool        | Hyperdrive Pool     | Hyperdrive Pool
+         v                    v                          v                        v                     v
++------------------+ +------------------+      +-------------------+    +-------------------+ +-------------------+
+|     auth_db      | |     quiz_db      |      |    attempt_db     |    |    payment_db     | |   analytics_db    |
+| (Hostinger MySQL)| | (Hostinger MySQL)|      | (Hostinger MySQL) |    | (Hostinger MySQL) | | (Hostinger MySQL) |
++------------------+ +------------------+      +-------------------+    +-------------------+ +-------------------+
 ```
 
-## 2. Ingress & Traffic Flow
-1. **Client Request**: Next.js Web or Expo Mobile sends requests to `https://api.example.com/api/v1/*`.
-2. **Edge Processing**: Cloudflare Edge handles TLS termination, DDoS filtering, Turnstile validation, and dispatches to the Hono Worker.
-3. **Middleware Pipeline**: Hono executes Request ID generation, CORS allowlisting, rate limiting (KV-backed), and JWT authentication.
-4. **Data Layer & Hyperdrive**:
-   - The Worker accesses Prisma Client configured with the driver adapter.
-   - Prisma forwards TCP SQL packets through `env.HYPERDRIVE.connectionString`.
-   - Cloudflare Hyperdrive acts as an edge connection pooler, caching non-volatile query results and maintaining warm, persistent TLS connections to Hostinger MySQL (port 3306).
-5. **Database Execution**: Hostinger MySQL processes queries within ACID transaction boundaries.
-6. **Response / Asynchronous Offload**:
-   - Critical path (e.g., answer recording, quiz submission) responds immediately with server timestamps.
-   - Heavy background tasks (batch evaluation, leaderboard re-calculation, email notifications) are offloaded to Cloudflare Queues.
+## 2. Inter-Service Communication Patterns
+
+### A. Paid Quiz Attempt Workflow
+1. Candidate issues `POST /api/v1/quizzes/:quizId/attempts` to API Gateway.
+2. Gateway validates Bearer token with **Auth Service** (`/internal/verify-token`) and extracts `userId`.
+3. Gateway dispatches request to **Attempt Service**.
+4. **Attempt Service** calls **Quiz Content Service** (`POST /internal/quiz-scoring-keys`) to inspect question counts and whether `price > 0`.
+5. If `price > 0`, **Attempt Service** calls **Payment Service** (`POST /internal/check-access` with `userId` and `quizId`).
+6. If active unexpired `QuizAccess` exists, **Attempt Service** initializes `QuizAttempt` with `expiresAt = now + durationSeconds`.
+
+### B. Transactional Server-Authoritative Scoring Workflow
+1. Candidate issues `POST /api/v1/attempts/:attemptId/submit`.
+2. **Attempt Service** queries **Quiz Content Service** (`POST /internal/quiz-scoring-keys`).
+3. For each question:
+   - Correct option selected: adds `question.marks` (e.g. `+1.0`).
+   - Incorrect option selected: deducts `quiz.negativeMark` penalty (e.g. `-0.25`).
+   - Unanswered: zero marks.
+4. Attempt is marked `SUBMITTED` with final score, percentage, and accuracy.
+5. **Eventual Consistency**: Attempt Service publishes an event / HTTP callback to **Analytics Service** (`POST /internal/record-attempt-result`) to recalculate leaderboards with deterministic tie-breaking (highest score, then earliest completed timestamp).

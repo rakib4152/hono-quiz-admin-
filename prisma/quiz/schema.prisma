@@ -1,0 +1,150 @@
+// Prisma Schema for Quiz Content Service
+// Database: quiz_db (Hostinger MySQL 8.0)
+// Independent microservice schema — NO cross-database relations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("QUIZ_DATABASE_URL")
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Category {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  name      String   @db.VarChar(191)
+  slug      String   @unique @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exams Exam[]
+
+  @@map("categories")
+}
+
+model Exam {
+  id          String  @id @default(cuid()) @db.VarChar(30)
+  categoryId  String  @db.VarChar(30)
+  name        String  @db.VarChar(191)
+  slug        String  @db.VarChar(191)
+  description String? @db.Text
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  quizzes  Quiz[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@map("exams")
+}
+
+model Subject {
+  id        String     @id @default(cuid()) @db.VarChar(30)
+  name      String     @db.VarChar(191)
+  slug      String     @unique @db.VarChar(191)
+  topics    Topic[]
+  questions Question[]
+
+  @@map("subjects")
+}
+
+model Topic {
+  id        String @id @default(cuid()) @db.VarChar(30)
+  subjectId String @db.VarChar(30)
+  name      String @db.VarChar(191)
+  slug      String @db.VarChar(191)
+
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  questions Question[]
+
+  @@unique([subjectId, slug])
+  @@index([subjectId])
+  @@map("topics")
+}
+
+model Quiz {
+  id               String     @id @default(cuid()) @db.VarChar(30)
+  examId           String     @db.VarChar(30)
+  title            String     @db.VarChar(191)
+  slug             String     @db.VarChar(191)
+  description      String?    @db.Text
+  status           QuizStatus @default(DRAFT)
+  price            Int        @default(0) // Minor unit (Paisa) or BDT
+  currency         String     @default("BDT") @db.VarChar(3)
+  durationSeconds  Int?
+  passPercentage   Float?
+  shuffleQuestions Boolean    @default(false)
+  shuffleOptions   Boolean    @default(false)
+  negativeMark     Float      @default(0)
+  maxAttempts      Int?
+  publishedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  exam      Exam           @relation(fields: [examId], references: [id], onDelete: Restrict)
+  questions QuizQuestion[]
+
+  @@unique([examId, slug])
+  @@index([examId, status])
+  @@index([status, publishedAt])
+  @@map("quizzes")
+}
+
+model Question {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  subjectId   String   @db.VarChar(30)
+  topicId     String?  @db.VarChar(30)
+  body        String   @db.Text
+  explanation String?  @db.Text
+  difficulty  Int      @default(1)
+  marks       Float    @default(1)
+  imageUrl    String?  @db.VarChar(500)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subject Subject        @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  topic   Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  options Option[]
+  quizzes QuizQuestion[]
+
+  @@index([subjectId, topicId])
+  @@index([isActive])
+  @@map("questions")
+}
+
+model Option {
+  id         String  @id @default(cuid()) @db.VarChar(30)
+  questionId String  @db.VarChar(30)
+  text       String  @db.Text
+  imageUrl   String? @db.VarChar(500)
+  isCorrect  Boolean @default(false)
+  position   Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, position])
+  @@index([questionId])
+  @@map("options")
+}
+
+model QuizQuestion {
+  quizId     String @db.VarChar(30)
+  questionId String @db.VarChar(30)
+  position   Int
+  marks      Float?
+
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@id([quizId, questionId])
+  @@unique([quizId, position])
+  @@index([questionId])
+  @@map("quiz_questions")
+}

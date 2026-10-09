@@ -1,0 +1,65 @@
+// Prisma Schema for Auth Service
+// Database: auth_db (Hostinger MySQL 8.0)
+// Independent microservice schema — NO cross-database relations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("AUTH_DATABASE_URL")
+}
+
+enum Role {
+  USER
+  EDITOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid()) @db.VarChar(30)
+  name         String?  @db.VarChar(191)
+  email        String?  @unique @db.VarChar(191)
+  passwordHash String?  @db.VarChar(255)
+  role         Role     @default(USER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions Session[]
+  devices  Device[]
+
+  @@index([role, isActive])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  userId    String   @db.VarChar(30)
+  tokenHash String   @unique @db.VarChar(255)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("sessions")
+}
+
+model Device {
+  id         String   @id @default(cuid()) @db.VarChar(30)
+  userId     String   @db.VarChar(30)
+  deviceKey  String   @db.VarChar(191)
+  platform   String   @db.VarChar(30)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceKey])
+  @@index([userId])
+  @@map("devices")
+}

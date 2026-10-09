@@ -1,0 +1,50 @@
+// Prisma Schema for Analytics & Leaderboard Service
+// Database: analytics_db (Hostinger MySQL 8.0)
+// Independent microservice schema — NO cross-database relations
+// Foreign entities (userId, quizId) referenced as scalar VarChar(30) strings
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("ANALYTICS_DATABASE_URL")
+}
+
+model Badge {
+  id          String  @id @default(cuid()) @db.VarChar(30)
+  name        String  @unique @db.VarChar(191)
+  description String? @db.Text
+  imageUrl    String? @db.VarChar(500)
+
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  userId   String   @db.VarChar(30) // External reference to auth_db.users.id
+  badgeId  String   @db.VarChar(30)
+  earnedAt DateTime @default(now())
+
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+  @@index([badgeId])
+  @@map("user_badges")
+}
+
+model LeaderboardEntry {
+  id             String    @id @default(cuid()) @db.VarChar(30)
+  userId         String    @db.VarChar(30) // External reference to auth_db.users.id
+  quizId         String    @db.VarChar(30) // External reference to quiz_db.quizzes.id
+  bestScore      Float     @default(0)
+  bestPercentage Float     @default(0)
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, quizId])
+  @@index([quizId, bestScore])
+  @@map("leaderboard_entries")
+}
