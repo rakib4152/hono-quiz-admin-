@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quiz-platform-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-14",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "quiz-db-hyperdrive-id"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE_KV",
+      "id": "quiz-cache-kv-id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_R2",
+      "bucket_name": "quiz-assets-production"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "API_VERSION": "v1",
+    "CORS_ALLOWED_ORIGINS": "https://admin.example.com,https://quiz.example.com"
+  }
+}

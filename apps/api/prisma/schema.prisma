@@ -1,0 +1,32 @@
+// Prisma Schema for Phase 1: Database Connectivity Proof-of-Concept & System Probe
+// Target Database: Hostinger Remote MySQL 8.0.x
+// Connection Mode: Hyperdrive TCP Gateway via Worker Driver Adapter
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// Phase 1 System Probe Model to verify:
+// 1. DDL & Migration execution
+// 2. DML Operations (INSERT, SELECT, UPDATE, DELETE)
+// 3. Transactions & Rollback
+// 4. UTF8MB4 Bengali / Bangla character encoding
+model SystemProbe {
+  id             String    @id @default(uuid()) @db.VarChar(36)
+  probeName      String    @db.VarChar(100)
+  testMessage    String    @db.VarChar(255)
+  banglaPayload  String?   @db.VarChar(500) // e.g. "বাংলা ইউনিকোড সমর্থন সফল"
+  latencyMs      Int       @default(0)
+  isSuccessful   Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @db.DateTime(3)
+  updatedAt      DateTime  @updatedAt @db.DateTime(3)
+
+  @@index([createdAt])
+  @@map("system_probes")
+}
