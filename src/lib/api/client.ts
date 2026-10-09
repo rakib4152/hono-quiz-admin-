@@ -355,3 +355,34 @@ export const initialOrders: OrderPaymentDTO[] = [
     createdAt: '2026-03-20T08:55:00Z',
   },
 ];
+
+import apiWorker from '../../../apps/api/src/index.js';
+
+/**
+ * Direct invoker for the Cloudflare Worker API
+ */
+export async function executeWorkerApi(
+  path: string,
+  method: string = 'GET',
+  body?: any,
+  token?: string
+) {
+  const url = `https://api.example.com/api/v1${path.startsWith('/') ? path : '/' + path}`;
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+  });
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const req = new Request(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const res = await apiWorker.fetch(req, { ENVIRONMENT: 'production', API_VERSION: 'v1' }, {});
+  const data = await res.json();
+  return { status: res.status, ok: res.ok, data };
+}
+

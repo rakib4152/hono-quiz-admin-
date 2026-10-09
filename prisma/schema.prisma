@@ -1,6 +1,5 @@
 // Prisma Schema for Scalable Quiz Platform
 // Engine: Hostinger MySQL 8.0.x InnoDB
-// Driver: Prisma Driver Adapter with Cloudflare Hyperdrive / Node.js
 
 generator client {
   provider = "prisma-client-js"
