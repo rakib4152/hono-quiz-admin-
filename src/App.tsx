@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster, toast } from 'sonner';
 import { AdminSidebar } from './components/admin/layout/AdminSidebar.js';
 import { AdminHeader } from './components/admin/layout/AdminHeader.js';
@@ -36,6 +36,12 @@ import {
   initialTopics,
   initialChapters,
   executeWorkerApi,
+  apiFetch,
+  mapPrismaCategory,
+  mapPrismaExam,
+  mapPrismaQuiz,
+  getApiBaseUrl,
+  setApiBaseUrl,
 } from './lib/api/client.js';
 
 import {
@@ -73,6 +79,57 @@ export default function App() {
   const [subjects, setSubjects] = useState<SubjectDTO[]>(initialSubjects);
   const [topics, setTopics] = useState<TopicDTO[]>(initialTopics);
   const [chapters, setChapters] = useState<ChapterDTO[]>(initialChapters);
+
+  // Live Hono API Synchronization State
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
+  const [apiUrl, setApiUrlState] = useState<string>(getApiBaseUrl());
+
+  const fetchLiveData = useCallback(async () => {
+    setIsLoadingCatalog(true);
+    setCatalogError(null);
+    try {
+      const [catRes, examRes, quizRes] = await Promise.all([
+        apiFetch('/categories'),
+        apiFetch('/exams'),
+        apiFetch('/quizzes'),
+      ]);
+
+      const live = catRes.isLiveBackend || examRes.isLiveBackend || quizRes.isLiveBackend;
+      setIsLiveConnected(live);
+
+      if (catRes.ok && Array.isArray(catRes.data) && catRes.data.length > 0) {
+        setCategories(catRes.data.map(mapPrismaCategory));
+      }
+      if (examRes.ok && Array.isArray(examRes.data) && examRes.data.length > 0) {
+        setExams(examRes.data.map(mapPrismaExam));
+      }
+      if (quizRes.ok && Array.isArray(quizRes.data) && quizRes.data.length > 0) {
+        setQuizzes(quizRes.data.map(mapPrismaQuiz));
+      }
+
+      if (live) {
+        toast.success('Connected to Live Hono API backend & Hostinger MySQL!');
+      }
+    } catch (err: any) {
+      console.warn('Live API sync warning:', err);
+      setCatalogError(err.message || 'Unable to sync with Hono API');
+    } finally {
+      setIsLoadingCatalog(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveData();
+  }, [fetchLiveData]);
+
+  const handleConfigureApiUrl = (newUrl: string) => {
+    setApiBaseUrl(newUrl);
+    setApiUrlState(newUrl);
+    toast.info(`API Base URL set to ${newUrl}. Reconnecting...`);
+    fetchLiveData();
+  };
 
   const [editingQuestion, setEditingQuestion] = useState<QuestionDTO | null>(null);
 
@@ -337,6 +394,10 @@ export default function App() {
               onNavigate={handleNavigate}
               isDarkMode={isDarkMode}
               onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+              isLiveConnected={isLiveConnected}
+              apiUrl={apiUrl}
+              onRefreshData={fetchLiveData}
+              onConfigureApiUrl={handleConfigureApiUrl}
             />
 
             {/* Page Router View */}
@@ -398,6 +459,10 @@ export default function App() {
                   onAddChapter={handleAddChapter}
                   onUpdateChapter={handleUpdateChapter}
                   onDeleteChapter={handleDeleteChapter}
+                  isLoading={isLoadingCatalog}
+                  error={catalogError}
+                  onRefresh={fetchLiveData}
+                  isLiveConnected={isLiveConnected}
                 />
               )}
 
@@ -409,6 +474,10 @@ export default function App() {
                   onUpdateQuiz={handleUpdateQuiz}
                   onDeleteQuiz={handleDeleteQuiz}
                   onDuplicateQuiz={handleDuplicateQuiz}
+                  isLoading={isLoadingCatalog}
+                  error={catalogError}
+                  onRefresh={fetchLiveData}
+                  isLiveConnected={isLiveConnected}
                 />
               )}
 

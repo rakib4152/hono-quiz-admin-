@@ -15,6 +15,9 @@ import {
   Table as TableIcon,
   Filter,
   Sparkles,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { QuizDTO, ExamDTO } from '../../../lib/api/client.js';
 import { DataTable, ColumnDef } from '../tables/DataTable.js';
@@ -40,6 +43,10 @@ interface QuizzesPageProps {
   onUpdateQuiz: (quiz: QuizDTO) => void;
   onDeleteQuiz: (id: string) => void;
   onDuplicateQuiz: (quiz: QuizDTO) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
+  isLiveConnected?: boolean;
 }
 
 export const QuizzesPage: React.FC<QuizzesPageProps> = ({
@@ -49,6 +56,10 @@ export const QuizzesPage: React.FC<QuizzesPageProps> = ({
   onUpdateQuiz,
   onDeleteQuiz,
   onDuplicateQuiz,
+  isLoading = false,
+  error = null,
+  onRefresh,
+  isLiveConnected = false,
 }) => {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -326,6 +337,27 @@ export const QuizzesPage: React.FC<QuizzesPageProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="h-8 gap-1.5 text-xs border-slate-700 bg-slate-900 text-slate-300 hover:text-white"
+            >
+              <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin text-orange-400' : ''}`} />
+              Refresh
+            </Button>
+          )}
+
+          <Badge
+            variant={isLiveConnected ? 'success' : 'outline'}
+            className="text-[11px] h-7 px-2.5 font-medium flex items-center gap-1.5"
+          >
+            <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            {isLiveConnected ? 'Live Hono API' : 'Local Fallback'}
+          </Badge>
+
           {/* View Mode Toggle */}
           <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
             <button
@@ -357,6 +389,36 @@ export const QuizzesPage: React.FC<QuizzesPageProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Error Banner with Retry */}
+      {error && (
+        <div className="p-3.5 bg-rose-950/40 border border-rose-800/80 rounded-xl flex items-center justify-between gap-3 text-rose-200">
+          <div className="flex items-center gap-2.5 text-xs">
+            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+            <div>
+              <span className="font-semibold text-rose-300">API Synchronization Warning:</span> {error}
+            </div>
+          </div>
+          {onRefresh && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRefresh}
+              className="h-7 text-xs border-rose-700 bg-rose-900/30 text-rose-200 hover:bg-rose-900/50"
+            >
+              Retry Sync
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="p-8 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />
+          <div className="text-xs text-slate-400">Loading quizzes from Hono / Cloudflare backend...</div>
+        </div>
+      )}
 
       {/* Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs">

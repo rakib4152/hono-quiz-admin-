@@ -65,6 +65,7 @@ export interface ExamDTO {
   nameEn: string;
   nameBn: string;
   code: string;
+  slug?: string;
   totalMarks?: number;
   durationMinutes?: number;
   quizzesCount: number;
@@ -80,6 +81,7 @@ export interface SubjectDTO {
   nameEn: string;
   nameBn: string;
   code: string;
+  slug?: string;
   marksWeightage: number;
   topicsCount: number;
   status: 'ACTIVE' | 'INACTIVE';
@@ -93,6 +95,7 @@ export interface TopicDTO {
   nameEn: string;
   nameBn: string;
   code: string;
+  slug?: string;
   chaptersCount: number;
   questionsCount: number;
   status: 'ACTIVE' | 'INACTIVE';
@@ -107,6 +110,7 @@ export interface ChapterDTO {
   nameEn: string;
   nameBn: string;
   code: string;
+  slug?: string;
   questionsCount: number;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
@@ -749,6 +753,238 @@ export const initialOrders: OrderPaymentDTO[] = [
 ];
 
 import { apiGateway } from '../../../services/api-gateway/src/index.js';
+
+// Base API URL configuration
+export const DEFAULT_API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://localhost:8787/api/v1';
+
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('API_BASE_URL');
+    if (saved) return saved;
+  }
+  return DEFAULT_API_BASE_URL;
+}
+
+export function setApiBaseUrl(url: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('API_BASE_URL', url.trim());
+  }
+}
+
+/**
+ * Normalizes and maps raw Prisma Category record to CategoryDTO
+ */
+export function mapPrismaCategory(cat: any): CategoryDTO {
+  return {
+    id: cat.id || `cat-${Date.now()}`,
+    nameEn: cat.nameEn || cat.name || 'Untitled Category',
+    nameBn: cat.nameBn || cat.name || '',
+    slug: cat.slug || '',
+    description: cat.description || '',
+    examsCount: cat.examsCount ?? cat._count?.exams ?? (Array.isArray(cat.exams) ? cat.exams.length : 0),
+    status: cat.status || (cat.isActive === false ? 'INACTIVE' : 'ACTIVE'),
+    createdAt: cat.createdAt ? new Date(cat.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+/**
+ * Normalizes and maps raw Prisma Exam record to ExamDTO
+ */
+export function mapPrismaExam(exam: any): ExamDTO {
+  return {
+    id: exam.id || `exam-${Date.now()}`,
+    categoryId: exam.categoryId || '',
+    categoryName: exam.categoryName || exam.category?.name || exam.category?.nameEn || 'General',
+    nameEn: exam.nameEn || exam.name || 'Untitled Exam',
+    nameBn: exam.nameBn || exam.name || '',
+    code: exam.code || exam.slug || `EXAM-${(exam.id || '').slice(-4)}`,
+    slug: exam.slug || '',
+    totalMarks: exam.totalMarks ?? 100,
+    durationMinutes: exam.durationMinutes ?? 60,
+    quizzesCount: exam.quizzesCount ?? exam._count?.quizzes ?? (Array.isArray(exam.quizzes) ? exam.quizzes.length : 0),
+    subjectsCount: exam.subjectsCount ?? exam._count?.subjects ?? 0,
+    status: exam.status || (exam.isActive === false ? 'INACTIVE' : 'ACTIVE'),
+    createdAt: exam.createdAt ? new Date(exam.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+/**
+ * Normalizes and maps raw Prisma Quiz record to QuizDTO
+ */
+export function mapPrismaQuiz(quiz: any): QuizDTO {
+  const durationMin =
+    quiz.durationMinutes ??
+    (quiz.durationSeconds ? Math.round(quiz.durationSeconds / 60) : 60);
+
+  const priceVal = Number(quiz.priceBdt ?? quiz.price ?? 0);
+  const isPaidVal = Boolean(quiz.isPaid ?? (priceVal > 0));
+
+  return {
+    id: quiz.id || `quiz-${Date.now()}`,
+    titleEn: quiz.titleEn || quiz.title || 'Untitled Quiz',
+    titleBn: quiz.titleBn || quiz.title || '',
+    slug: quiz.slug || '',
+    examId: quiz.examId || '',
+    examName: quiz.examName || quiz.exam?.name || quiz.exam?.nameEn || 'Exam',
+    totalMarks: Number(quiz.totalMarks ?? 100),
+    passMarks: Number(
+      quiz.passMarks ??
+        (quiz.passPercentage
+          ? Math.round((quiz.passPercentage / 100) * (quiz.totalMarks || 100))
+          : 50)
+    ),
+    durationMinutes: durationMin,
+    totalQuestions:
+      quiz.totalQuestions ??
+      quiz._count?.quizQuestions ??
+      (Array.isArray(quiz.quizQuestions) ? quiz.quizQuestions.length : 0),
+    isPaid: isPaidVal,
+    priceBdt: priceVal,
+    status: quiz.status || 'DRAFT',
+    publishedAt: quiz.publishedAt ? new Date(quiz.publishedAt).toISOString() : undefined,
+  };
+}
+
+/**
+ * Normalizes and maps raw Prisma Subject record to SubjectDTO
+ */
+export function mapPrismaSubject(sub: any): SubjectDTO {
+  return {
+    id: sub.id || `sub-${Date.now()}`,
+    examId: sub.examId || 'exam-1',
+    examName: sub.examName || sub.exam?.name || 'General Exam',
+    nameEn: sub.nameEn || sub.name || 'Untitled Subject',
+    nameBn: sub.nameBn || sub.name || '',
+    code: sub.code || sub.slug || `SUB-${(sub.id || '').slice(-4)}`,
+    slug: sub.slug || '',
+    marksWeightage: sub.marksWeightage || 30,
+    topicsCount: sub.topicsCount ?? sub._count?.topics ?? (Array.isArray(sub.topics) ? sub.topics.length : 0),
+    status: sub.status || 'ACTIVE',
+    createdAt: sub.createdAt ? new Date(sub.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+/**
+ * Normalizes and maps raw Prisma Topic record to TopicDTO
+ */
+export function mapPrismaTopic(top: any): TopicDTO {
+  return {
+    id: top.id || `top-${Date.now()}`,
+    subjectId: top.subjectId || '',
+    subjectName: top.subjectName || top.subject?.name || top.subject?.nameEn || 'Subject',
+    nameEn: top.nameEn || top.name || 'Untitled Topic',
+    nameBn: top.nameBn || top.name || '',
+    code: top.code || top.slug || `TOP-${(top.id || '').slice(-4)}`,
+    slug: top.slug || '',
+    chaptersCount: top.chaptersCount ?? top._count?.chapters ?? 0,
+    questionsCount: top.questionsCount ?? top._count?.questions ?? (Array.isArray(top.questions) ? top.questions.length : 0),
+    status: top.status || 'ACTIVE',
+    createdAt: top.createdAt ? new Date(top.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+/**
+ * Normalizes and maps raw Prisma Chapter record to ChapterDTO
+ */
+export function mapPrismaChapter(ch: any): ChapterDTO {
+  return {
+    id: ch.id || `ch-${Date.now()}`,
+    topicId: ch.topicId || '',
+    topicName: ch.topicName || ch.topic?.name || ch.topic?.nameEn || 'Topic',
+    subjectName: ch.subjectName || ch.subject?.name || 'Subject',
+    nameEn: ch.nameEn || ch.name || 'Untitled Chapter',
+    nameBn: ch.nameBn || ch.name || '',
+    code: ch.code || ch.slug || `CH-${(ch.id || '').slice(-4)}`,
+    slug: ch.slug || '',
+    questionsCount: ch.questionsCount ?? ch._count?.questions ?? 0,
+    status: ch.status || 'ACTIVE',
+    createdAt: ch.createdAt ? new Date(ch.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+export interface LiveApiResponse<T> {
+  ok: boolean;
+  status: number;
+  data: T;
+  isLiveBackend: boolean;
+  error?: string;
+}
+
+/**
+ * Smart API client: Attempts live HTTP fetch to Hono on Wrangler/Cloudflare first.
+ * If server is offline / unreachable, gracefully falls back to the in-memory Microservices Gateway.
+ */
+export async function apiFetch<T = any>(
+  path: string,
+  options: {
+    method?: string;
+    body?: any;
+    token?: string;
+    headers?: Record<string, string>;
+  } = {}
+): Promise<LiveApiResponse<T>> {
+  const baseUrl = getApiBaseUrl();
+  const cleanPath = path.startsWith('/') ? path : '/' + path;
+  const fullUrl = `${baseUrl.replace(/\/+$/, '')}${cleanPath}`;
+  const method = options.method || 'GET';
+
+  // 1. Attempt live HTTP request to Hono API (e.g. http://localhost:8787/api/v1/...)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+
+    const reqHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(options.headers || {}),
+    };
+    if (options.token) {
+      reqHeaders['Authorization'] = `Bearer ${options.token}`;
+    }
+
+    const response = await fetch(fullUrl, {
+      method,
+      headers: reqHeaders,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+    return {
+      ok: response.ok,
+      status: response.status,
+      data: data.data !== undefined ? data.data : data,
+      isLiveBackend: true,
+      error: response.ok ? undefined : data.error || `HTTP ${response.status}`,
+    };
+  } catch (err: any) {
+    // 2. Fallback to in-memory worker gateway if live backend is unreachable
+    console.warn(`[API] Live backend at ${fullUrl} not reachable. Falling back to local Gateway:`, err.message);
+
+    try {
+      const fallback = await executeWorkerApi(cleanPath, method, options.body, options.token);
+      const resData = fallback.data?.data !== undefined ? fallback.data.data : fallback.data;
+      return {
+        ok: fallback.ok,
+        status: fallback.status,
+        data: resData as T,
+        isLiveBackend: false,
+        error: fallback.ok ? undefined : fallback.data?.error || 'Local fallback error',
+      };
+    } catch (fallbackErr: any) {
+      return {
+        ok: false,
+        status: 500,
+        data: null as any,
+        isLiveBackend: false,
+        error: fallbackErr.message || 'API request failed',
+      };
+    }
+  }
+}
 
 /**
  * Direct invoker for the Cloudflare Microservices API Gateway

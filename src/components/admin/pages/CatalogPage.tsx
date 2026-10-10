@@ -12,6 +12,9 @@ import {
   CheckCircle,
   FolderTree,
   ExternalLink,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import {
   CategoryDTO,
@@ -57,6 +60,10 @@ interface CatalogPageProps {
   onAddChapter: (item: ChapterDTO) => void;
   onUpdateChapter: (item: ChapterDTO) => void;
   onDeleteChapter: (id: string) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
+  isLiveConnected?: boolean;
 }
 
 export const CatalogPage: React.FC<CatalogPageProps> = ({
@@ -81,6 +88,10 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   onAddChapter,
   onUpdateChapter,
   onDeleteChapter,
+  isLoading = false,
+  error = null,
+  onRefresh,
+  isLiveConnected = false,
 }) => {
   // Sync tab with URL
   const determineTab = (path: string) => {
@@ -898,6 +909,27 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="h-8 gap-1.5 text-xs border-slate-700 bg-slate-900 text-slate-300 hover:text-white"
+            >
+              <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin text-orange-400' : ''}`} />
+              Refresh
+            </Button>
+          )}
+
+          <Badge
+            variant={isLiveConnected ? 'success' : 'outline'}
+            className="text-[11px] h-7 px-2.5 font-medium flex items-center gap-1.5"
+          >
+            <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            {isLiveConnected ? 'Live Hono API' : 'Local Fallback'}
+          </Badge>
+
           <Button
             size="sm"
             onClick={() => handleOpenCreateModal()}
@@ -908,6 +940,36 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Error Banner with Retry */}
+      {error && (
+        <div className="p-3.5 bg-rose-950/40 border border-rose-800/80 rounded-xl flex items-center justify-between gap-3 text-rose-200">
+          <div className="flex items-center gap-2.5 text-xs">
+            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+            <div>
+              <span className="font-semibold text-rose-300">API Synchronization Warning:</span> {error}
+            </div>
+          </div>
+          {onRefresh && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRefresh}
+              className="h-7 text-xs border-rose-700 bg-rose-900/30 text-rose-200 hover:bg-rose-900/50"
+            >
+              Retry Sync
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="p-8 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="h-6 w-6 text-orange-500 animate-spin" />
+          <div className="text-xs text-slate-400">Loading catalog from Hono / Cloudflare backend...</div>
+        </div>
+      )}
 
       {/* Tabs for all 5 tiers */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

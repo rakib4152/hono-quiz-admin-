@@ -11,9 +11,22 @@ import {
   Menu,
   CheckCircle,
   AlertTriangle,
+  Server,
+  RefreshCw,
+  Settings,
+  Check,
 } from 'lucide-react';
 import { Button } from '../../ui/button.js';
 import { Badge } from '../../ui/badge.js';
+import { Input } from '../../ui/input.js';
+import { Label } from '../../ui/label.js';
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../ui/dialog.js';
 
 interface AdminHeaderProps {
   currentPath: string;
@@ -21,6 +34,10 @@ interface AdminHeaderProps {
   onToggleMobileMenu?: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  isLiveConnected?: boolean;
+  apiUrl?: string;
+  onRefreshData?: () => void;
+  onConfigureApiUrl?: (newUrl: string) => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
@@ -29,9 +46,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onToggleMobileMenu,
   isDarkMode,
   onToggleDarkMode,
+  isLiveConnected = false,
+  apiUrl = 'http://localhost:8787/api/v1',
+  onRefreshData,
+  onConfigureApiUrl,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [tempApiUrl, setTempApiUrl] = useState(apiUrl);
   const [unreadCount, setUnreadCount] = useState(3);
 
   // Generate breadcrumbs from path
@@ -119,6 +142,40 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             placeholder="Search questions, quizzes, users..."
             className="w-full h-8 pl-8 pr-3 text-xs bg-slate-950 border border-slate-700/80 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
           />
+        </div>
+
+        {/* Live Backend Connection Indicator & Config */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              setTempApiUrl(apiUrl);
+              setShowApiConfig(true);
+            }}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium border border-slate-800 bg-slate-950 hover:bg-slate-800 transition text-slate-300"
+            title="Configure Hono API Endpoint"
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {isLiveConnected ? 'Hono API Live' : 'API Fallback'}
+            </span>
+            <Settings className="h-3 w-3 text-slate-500 hover:text-slate-300" />
+          </button>
+
+          {onRefreshData && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefreshData}
+              className="h-8 w-8 text-slate-400 hover:text-white"
+              title="Refresh live data from Hono API"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
 
         {/* Dark/Light mode toggle */}
@@ -233,6 +290,70 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Hono API Endpoint Configuration Dialog */}
+      <Dialog open={showApiConfig} onOpenChange={setShowApiConfig}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Server className="h-4 w-4 text-orange-400" />
+            Hono API Backend Connection Settings
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-400">
+            Configure the live API base endpoint running on Cloudflare Workers / Wrangler and connected to Hostinger MySQL via Prisma.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-300">API Base URL</Label>
+            <Input
+              value={tempApiUrl}
+              onChange={(e) => setTempApiUrl(e.target.value)}
+              placeholder="http://localhost:8787/api/v1"
+              className="font-mono text-xs bg-slate-950 border-slate-700"
+            />
+            <p className="text-[11px] text-slate-500">
+              Default local Wrangler endpoint: <code className="text-slate-400">http://localhost:8787/api/v1</code>
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1 text-xs">
+            <div className="font-semibold text-slate-300 flex items-center justify-between">
+              <span>Connection Status:</span>
+              <span className={`inline-flex items-center gap-1.5 ${isLiveConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <span className={`h-2 w-2 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                {isLiveConnected ? 'Connected (Live Data)' : 'Local Fallback (Mock Cache)'}
+              </span>
+            </div>
+            <p className="text-slate-500 text-[11px]">
+              If the server is unreachable or offline, the dashboard gracefully utilizes the in-memory Microservices Gateway fallback without crashing.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowApiConfig(false)}
+            className="text-xs border-slate-700"
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              if (onConfigureApiUrl) {
+                onConfigureApiUrl(tempApiUrl);
+              }
+              setShowApiConfig(false);
+            }}
+            className="text-xs bg-orange-600 hover:bg-orange-700 text-white"
+          >
+            Save & Connect
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </header>
   );
 };

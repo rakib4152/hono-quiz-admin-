@@ -192,11 +192,37 @@ export const quizService = {
       return { status: 200, data: { success: true, data: Array.from(quizDb.categories.values()), correlationId } };
     }
 
+    // GET /exams
+    if (path === '/exams' && method === 'GET') {
+      const examsList = Array.from(quizDb.exams.values()).map((e) => {
+        const cat = quizDb.categories.get(e.categoryId);
+        const count = Array.from(quizDb.quizzes.values()).filter((q) => q.examId === e.id).length;
+        return { ...e, categoryName: cat?.name || 'General', quizzesCount: count, status: 'ACTIVE' };
+      });
+      return { status: 200, data: { success: true, count: examsList.length, data: examsList, correlationId } };
+    }
+
+    // GET /subjects
+    if (path === '/subjects' && method === 'GET') {
+      return { status: 200, data: { success: true, data: Array.from(quizDb.subjects.values()), correlationId } };
+    }
+
+    // GET /topics
+    if (path === '/topics' && method === 'GET') {
+      return { status: 200, data: { success: true, data: Array.from(quizDb.topics.values()), correlationId } };
+    }
+
+    // GET /questions
+    if (path === '/questions' && method === 'GET') {
+      return { status: 200, data: { success: true, count: quizDb.questions.size, data: Array.from(quizDb.questions.values()), correlationId } };
+    }
+
     // GET /quizzes
     if (path === '/quizzes' && method === 'GET') {
       const list = Array.from(quizDb.quizzes.values()).map((q) => {
+        const exam = quizDb.exams.get(q.examId);
         const count = Array.from(quizDb.quizQuestions.values()).filter((qq) => qq.quizId === q.id).length;
-        return { ...q, totalQuestions: count };
+        return { ...q, examName: exam?.name || 'Exam', totalQuestions: count };
       });
       return { status: 200, data: { success: true, count: list.length, data: list, correlationId } };
     }
