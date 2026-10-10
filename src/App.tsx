@@ -20,11 +20,21 @@ import {
   UserDTO,
   AttemptDTO,
   OrderPaymentDTO,
+  CategoryDTO,
+  ExamDTO,
+  SubjectDTO,
+  TopicDTO,
+  ChapterDTO,
   initialQuestions,
   initialQuizzes,
   initialUsers,
   initialAttempts,
   initialOrders,
+  initialCategories,
+  initialExams,
+  initialSubjects,
+  initialTopics,
+  initialChapters,
   executeWorkerApi,
 } from './lib/api/client.js';
 
@@ -56,6 +66,13 @@ export default function App() {
   const [users, setUsers] = useState<UserDTO[]>(initialUsers);
   const [attempts, setAttempts] = useState<AttemptDTO[]>(initialAttempts);
   const [orders, setOrders] = useState<OrderPaymentDTO[]>(initialOrders);
+
+  // Catalog Hierarchy State
+  const [categories, setCategories] = useState<CategoryDTO[]>(initialCategories);
+  const [exams, setExams] = useState<ExamDTO[]>(initialExams);
+  const [subjects, setSubjects] = useState<SubjectDTO[]>(initialSubjects);
+  const [topics, setTopics] = useState<TopicDTO[]>(initialTopics);
+  const [chapters, setChapters] = useState<ChapterDTO[]>(initialChapters);
 
   const [editingQuestion, setEditingQuestion] = useState<QuestionDTO | null>(null);
 
@@ -112,6 +129,48 @@ export default function App() {
       )
     );
   };
+
+  // Quiz Mutation Handlers
+  const handleAddQuiz = (q: QuizDTO) => {
+    setQuizzes((prev) => [q, ...prev]);
+  };
+  const handleUpdateQuiz = (q: QuizDTO) => {
+    setQuizzes((prev) => prev.map((item) => (item.id === q.id ? q : item)));
+  };
+  const handleDeleteQuiz = (id: string) => {
+    setQuizzes((prev) => prev.filter((item) => item.id !== id));
+  };
+  const handleDuplicateQuiz = (q: QuizDTO) => {
+    const copy: QuizDTO = {
+      ...q,
+      id: `quiz-${Date.now()}`,
+      titleEn: `${q.titleEn} (Copy)`,
+      titleBn: `${q.titleBn} (কপি)`,
+      slug: `${q.slug}-copy`,
+    };
+    setQuizzes((prev) => [copy, ...prev]);
+  };
+
+  // Catalog Mutation Handlers
+  const handleAddCategory = (c: CategoryDTO) => setCategories((prev) => [c, ...prev]);
+  const handleUpdateCategory = (c: CategoryDTO) => setCategories((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+  const handleDeleteCategory = (id: string) => setCategories((prev) => prev.filter((item) => item.id !== id));
+
+  const handleAddExam = (e: ExamDTO) => setExams((prev) => [e, ...prev]);
+  const handleUpdateExam = (e: ExamDTO) => setExams((prev) => prev.map((item) => (item.id === e.id ? e : item)));
+  const handleDeleteExam = (id: string) => setExams((prev) => prev.filter((item) => item.id !== id));
+
+  const handleAddSubject = (s: SubjectDTO) => setSubjects((prev) => [s, ...prev]);
+  const handleUpdateSubject = (s: SubjectDTO) => setSubjects((prev) => prev.map((item) => (item.id === s.id ? s : item)));
+  const handleDeleteSubject = (id: string) => setSubjects((prev) => prev.filter((item) => item.id !== id));
+
+  const handleAddTopic = (t: TopicDTO) => setTopics((prev) => [t, ...prev]);
+  const handleUpdateTopic = (t: TopicDTO) => setTopics((prev) => prev.map((item) => (item.id === t.id ? t : item)));
+  const handleDeleteTopic = (id: string) => setTopics((prev) => prev.filter((item) => item.id !== id));
+
+  const handleAddChapter = (c: ChapterDTO) => setChapters((prev) => [c, ...prev]);
+  const handleUpdateChapter = (c: ChapterDTO) => setChapters((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+  const handleDeleteChapter = (id: string) => setChapters((prev) => prev.filter((item) => item.id !== id));
 
   // Run live API endpoint on Cloudflare Worker router
   const handleRunApiTest = async (testKey: string) => {
@@ -316,13 +375,40 @@ export default function App() {
                 currentPath === '/admin/exams' ||
                 currentPath === '/admin/subjects' ||
                 currentPath === '/admin/topics' ||
-                currentPath === '/admin/chapters') && <CatalogPage />}
+                currentPath === '/admin/chapters') && (
+                <CatalogPage
+                  currentPath={currentPath}
+                  categories={categories}
+                  exams={exams}
+                  subjects={subjects}
+                  topics={topics}
+                  chapters={chapters}
+                  onAddCategory={handleAddCategory}
+                  onUpdateCategory={handleUpdateCategory}
+                  onDeleteCategory={handleDeleteCategory}
+                  onAddExam={handleAddExam}
+                  onUpdateExam={handleUpdateExam}
+                  onDeleteExam={handleDeleteExam}
+                  onAddSubject={handleAddSubject}
+                  onUpdateSubject={handleUpdateSubject}
+                  onDeleteSubject={handleDeleteSubject}
+                  onAddTopic={handleAddTopic}
+                  onUpdateTopic={handleUpdateTopic}
+                  onDeleteTopic={handleDeleteTopic}
+                  onAddChapter={handleAddChapter}
+                  onUpdateChapter={handleUpdateChapter}
+                  onDeleteChapter={handleDeleteChapter}
+                />
+              )}
 
               {currentPath === '/admin/quizzes' && (
                 <QuizzesPage
                   quizzes={quizzes}
-                  onNewQuiz={() => toast.info('New Quiz modal triggered')}
-                  onEditQuiz={(q) => toast.info(`Editing quiz: ${q.titleEn}`)}
+                  exams={exams}
+                  onAddQuiz={handleAddQuiz}
+                  onUpdateQuiz={handleUpdateQuiz}
+                  onDeleteQuiz={handleDeleteQuiz}
+                  onDuplicateQuiz={handleDuplicateQuiz}
                 />
               )}
 

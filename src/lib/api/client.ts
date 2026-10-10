@@ -47,6 +47,71 @@ export interface QuestionDTO {
   updatedAt: string;
 }
 
+export interface CategoryDTO {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+  slug: string;
+  description?: string;
+  examsCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface ExamDTO {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  nameEn: string;
+  nameBn: string;
+  code: string;
+  totalMarks?: number;
+  durationMinutes?: number;
+  quizzesCount: number;
+  subjectsCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface SubjectDTO {
+  id: string;
+  examId: string;
+  examName: string;
+  nameEn: string;
+  nameBn: string;
+  code: string;
+  marksWeightage: number;
+  topicsCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface TopicDTO {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  nameEn: string;
+  nameBn: string;
+  code: string;
+  chaptersCount: number;
+  questionsCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface ChapterDTO {
+  id: string;
+  topicId: string;
+  topicName: string;
+  subjectName: string;
+  nameEn: string;
+  nameBn: string;
+  code: string;
+  questionsCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
 export interface QuizDTO {
   id: string;
   titleEn: string;
@@ -196,6 +261,333 @@ export const initialQuestions: QuestionDTO[] = [
     tags: ['Medical', 'Cell', 'Biology'],
     createdAt: '2026-03-18T09:15:00Z',
     updatedAt: '2026-03-18T09:15:00Z',
+  },
+];
+
+export const initialCategories: CategoryDTO[] = [
+  {
+    id: 'cat-1',
+    nameEn: 'Job Preparation',
+    nameBn: 'সরকারি ও ব্যাংক চাকরি প্রস্তুতি',
+    slug: 'job-preparation',
+    description: 'Civil service BCS, government bank officer, and ministry recruitment tests',
+    examsCount: 8,
+    status: 'ACTIVE',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'cat-2',
+    nameEn: 'Medical Admission',
+    nameBn: 'মেডিকেল ও ডেন্টাল ভর্তি প্রস্তুতি',
+    slug: 'medical-admission',
+    description: 'MBBS, BDS, and Armed Forces Medical College entrance tests',
+    examsCount: 4,
+    status: 'ACTIVE',
+    createdAt: '2026-01-05T00:00:00Z',
+  },
+  {
+    id: 'cat-3',
+    nameEn: 'University Admission',
+    nameBn: 'পাবলিক বিশ্ববিদ্যালয় ভর্তি পরীক্ষা',
+    slug: 'university-admission',
+    description: 'Dhaka University Ka/Kha/Ga, GST cluster, and RU/CU admission units',
+    examsCount: 12,
+    status: 'ACTIVE',
+    createdAt: '2026-01-10T00:00:00Z',
+  },
+  {
+    id: 'cat-4',
+    nameEn: 'Engineering Admission',
+    nameBn: 'প্রকৌশল ভর্তি পরীক্ষা (বুয়েট/কুয়েট/রুয়েট)',
+    slug: 'engineering-admission',
+    description: 'BUET, CKRUET cluster, and MIST entrance examinations',
+    examsCount: 3,
+    status: 'ACTIVE',
+    createdAt: '2026-01-15T00:00:00Z',
+  },
+  {
+    id: 'cat-5',
+    nameEn: 'Primary & NTRCA Teachers',
+    nameBn: 'প্রাথমিক শিক্ষক ও শিক্ষক নিবন্ধন (NTRCA)',
+    slug: 'teachers-recruitment',
+    description: 'Government Primary School Assistant Teacher and NTRCA 18th/19th exams',
+    examsCount: 6,
+    status: 'ACTIVE',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+];
+
+export const initialExams: ExamDTO[] = [
+  {
+    id: 'exam-1',
+    categoryId: 'cat-1',
+    categoryName: 'Job Preparation',
+    nameEn: '46th BCS Preliminary',
+    nameBn: '৪৬তম বিসিএস প্রিলিমিনারি পরীক্ষা',
+    code: 'BCS-46-PRE',
+    totalMarks: 200,
+    durationMinutes: 120,
+    quizzesCount: 24,
+    subjectsCount: 10,
+    status: 'ACTIVE',
+    createdAt: '2026-01-02T00:00:00Z',
+  },
+  {
+    id: 'exam-2',
+    categoryId: 'cat-1',
+    categoryName: 'Job Preparation',
+    nameEn: 'Combined 8 Banks Officer Cash',
+    nameBn: 'সমন্বিত ৮ ব্যাংক অফিসার ক্যাশ পরীক্ষা',
+    code: 'BANK-8-CASH',
+    totalMarks: 100,
+    durationMinutes: 60,
+    quizzesCount: 16,
+    subjectsCount: 5,
+    status: 'ACTIVE',
+    createdAt: '2026-01-08T00:00:00Z',
+  },
+  {
+    id: 'exam-3',
+    categoryId: 'cat-2',
+    categoryName: 'Medical Admission',
+    nameEn: 'Medical MBBS Admission 2026',
+    nameBn: 'মেডিকেল এমবিবিএস ভর্তি পরীক্ষা ২০২৬',
+    code: 'MED-MBBS-2026',
+    totalMarks: 100,
+    durationMinutes: 60,
+    quizzesCount: 30,
+    subjectsCount: 5,
+    status: 'ACTIVE',
+    createdAt: '2026-01-12T00:00:00Z',
+  },
+  {
+    id: 'exam-4',
+    categoryId: 'cat-3',
+    categoryName: 'University Admission',
+    nameEn: 'Dhaka University Ka Unit (Science)',
+    nameBn: 'ঢাকা বিশ্ববিদ্যালয় ক ইউনিট ভর্তি পরীক্ষা',
+    code: 'DU-KA-2026',
+    totalMarks: 100,
+    durationMinutes: 90,
+    quizzesCount: 18,
+    subjectsCount: 4,
+    status: 'ACTIVE',
+    createdAt: '2026-01-20T00:00:00Z',
+  },
+  {
+    id: 'exam-5',
+    categoryId: 'cat-4',
+    categoryName: 'Engineering Admission',
+    nameEn: 'BUET Preliminary Screening Test',
+    nameBn: 'বুয়েট প্রাক-নির্বাচনী পরীক্ষা',
+    code: 'BUET-PRE-2026',
+    totalMarks: 100,
+    durationMinutes: 60,
+    quizzesCount: 12,
+    subjectsCount: 3,
+    status: 'ACTIVE',
+    createdAt: '2026-01-25T00:00:00Z',
+  },
+];
+
+export const initialSubjects: SubjectDTO[] = [
+  {
+    id: 'sub-1',
+    examId: 'exam-1',
+    examName: '46th BCS Preliminary',
+    nameEn: 'Mathematics & Mental Ability',
+    nameBn: 'গাণিতিক যুক্তি ও মানসিক দক্ষতা',
+    code: 'MATH-BCS',
+    marksWeightage: 30,
+    topicsCount: 12,
+    status: 'ACTIVE',
+    createdAt: '2026-01-03T00:00:00Z',
+  },
+  {
+    id: 'sub-2',
+    examId: 'exam-1',
+    examName: '46th BCS Preliminary',
+    nameEn: 'Bangla Language & Literature',
+    nameBn: 'বাংলা ভাষা ও সাহিত্য',
+    code: 'BAN-BCS',
+    marksWeightage: 35,
+    topicsCount: 15,
+    status: 'ACTIVE',
+    createdAt: '2026-01-03T00:00:00Z',
+  },
+  {
+    id: 'sub-3',
+    examId: 'exam-1',
+    examName: '46th BCS Preliminary',
+    nameEn: 'English Language & Literature',
+    nameBn: 'ইংরেজি ভাষা ও সাহিত্য',
+    code: 'ENG-BCS',
+    marksWeightage: 35,
+    topicsCount: 14,
+    status: 'ACTIVE',
+    createdAt: '2026-01-03T00:00:00Z',
+  },
+  {
+    id: 'sub-4',
+    examId: 'exam-1',
+    examName: '46th BCS Preliminary',
+    nameEn: 'Bangladesh Affairs',
+    nameBn: 'বাংলাদেশ বিষয়াবলি',
+    code: 'BD-BCS',
+    marksWeightage: 30,
+    topicsCount: 18,
+    status: 'ACTIVE',
+    createdAt: '2026-01-04T00:00:00Z',
+  },
+  {
+    id: 'sub-5',
+    examId: 'exam-1',
+    examName: '46th BCS Preliminary',
+    nameEn: 'General Science & Technology',
+    nameBn: 'সাধারণ বিজ্ঞান ও তথ্যপ্রযুক্তি',
+    code: 'SCI-BCS',
+    marksWeightage: 30,
+    topicsCount: 16,
+    status: 'ACTIVE',
+    createdAt: '2026-01-04T00:00:00Z',
+  },
+  {
+    id: 'sub-6',
+    examId: 'exam-3',
+    examName: 'Medical MBBS Admission 2026',
+    nameEn: 'Biology (Botany & Zoology)',
+    nameBn: 'জীববিজ্ঞান (উদ্ভিদ ও প্রাণিবিজ্ঞান)',
+    code: 'BIO-MED',
+    marksWeightage: 30,
+    topicsCount: 20,
+    status: 'ACTIVE',
+    createdAt: '2026-01-13T00:00:00Z',
+  },
+  {
+    id: 'sub-7',
+    examId: 'exam-3',
+    examName: 'Medical MBBS Admission 2026',
+    nameEn: 'Chemistry',
+    nameBn: 'রসায়ন বিজ্ঞান',
+    code: 'CHEM-MED',
+    marksWeightage: 25,
+    topicsCount: 16,
+    status: 'ACTIVE',
+    createdAt: '2026-01-13T00:00:00Z',
+  },
+];
+
+export const initialTopics: TopicDTO[] = [
+  {
+    id: 'top-1',
+    subjectId: 'sub-1',
+    subjectName: 'Mathematics & Mental Ability',
+    nameEn: 'Algebra & Equations',
+    nameBn: 'বীজগণিতীয় রাশি ও সমীকরণ',
+    code: 'TOP-ALG',
+    chaptersCount: 5,
+    questionsCount: 420,
+    status: 'ACTIVE',
+    createdAt: '2026-01-05T00:00:00Z',
+  },
+  {
+    id: 'top-2',
+    subjectId: 'sub-2',
+    subjectName: 'Bangla Language & Literature',
+    nameEn: 'Ancient & Medieval Era Literature',
+    nameBn: 'প্রাচীন ও মধ্যযুগের সাহিত্য',
+    code: 'TOP-BAN-ANC',
+    chaptersCount: 4,
+    questionsCount: 380,
+    status: 'ACTIVE',
+    createdAt: '2026-01-05T00:00:00Z',
+  },
+  {
+    id: 'top-3',
+    subjectId: 'sub-6',
+    subjectName: 'Biology (Botany & Zoology)',
+    nameEn: 'Cell Structure & Function',
+    nameBn: 'কোষ ও এর গঠন',
+    code: 'TOP-CELL',
+    chaptersCount: 6,
+    questionsCount: 510,
+    status: 'ACTIVE',
+    createdAt: '2026-01-14T00:00:00Z',
+  },
+  {
+    id: 'top-4',
+    subjectId: 'sub-3',
+    subjectName: 'English Language & Literature',
+    nameEn: 'Parts of Speech & Idioms',
+    nameBn: 'পার্টস অব স্পিচ ও প্রবাদ প্রবচন',
+    code: 'TOP-ENG-GRAM',
+    chaptersCount: 8,
+    questionsCount: 650,
+    status: 'ACTIVE',
+    createdAt: '2026-01-06T00:00:00Z',
+  },
+  {
+    id: 'top-5',
+    subjectId: 'sub-4',
+    subjectName: 'Bangladesh Affairs',
+    nameEn: 'Liberation War & Constitution 1971',
+    nameBn: 'মহান মুক্তিযুদ্ধ ও সংবিধান ১৯৭২',
+    code: 'TOP-LIB-WAR',
+    chaptersCount: 7,
+    questionsCount: 720,
+    status: 'ACTIVE',
+    createdAt: '2026-01-07T00:00:00Z',
+  },
+];
+
+export const initialChapters: ChapterDTO[] = [
+  {
+    id: 'chap-1',
+    topicId: 'top-1',
+    topicName: 'Algebra & Equations',
+    subjectName: 'Mathematics',
+    nameEn: 'Linear & Quadratic Equations',
+    nameBn: 'একঘাত ও দ্বিঘাত সমীকরণ',
+    code: 'CHAP-EQ-01',
+    questionsCount: 140,
+    status: 'ACTIVE',
+    createdAt: '2026-01-06T00:00:00Z',
+  },
+  {
+    id: 'chap-2',
+    topicId: 'top-2',
+    topicName: 'Ancient & Medieval Era Literature',
+    subjectName: 'Bangla Literature',
+    nameEn: 'Charyapada & Mangalkavya',
+    nameBn: 'চর্যাপদ ও মঙ্গলকাব্য',
+    code: 'CHAP-CHAR-01',
+    questionsCount: 190,
+    status: 'ACTIVE',
+    createdAt: '2026-01-06T00:00:00Z',
+  },
+  {
+    id: 'chap-3',
+    topicId: 'top-3',
+    topicName: 'Cell Structure & Function',
+    subjectName: 'Biology',
+    nameEn: 'Mitochondria, Nucleus & Cell Division',
+    nameBn: 'মাইটোকন্ড্রিয়া, নিউক্লিয়াস ও কোষ বিভাজন',
+    code: 'CHAP-CELL-01',
+    questionsCount: 220,
+    status: 'ACTIVE',
+    createdAt: '2026-01-15T00:00:00Z',
+  },
+  {
+    id: 'chap-4',
+    topicId: 'top-4',
+    topicName: 'Parts of Speech & Idioms',
+    subjectName: 'English Literature',
+    nameEn: 'Subject-Verb Agreement & Gerunds',
+    nameBn: 'সাবজেক্ট ভার্ব এগ্রিমেন্ট ও জেরান্ড',
+    code: 'CHAP-ENG-01',
+    questionsCount: 180,
+    status: 'ACTIVE',
+    createdAt: '2026-01-08T00:00:00Z',
   },
 ];
 

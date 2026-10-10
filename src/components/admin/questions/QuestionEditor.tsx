@@ -25,6 +25,7 @@ import { Badge } from '../../ui/badge.js';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../ui/card.js';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs.js';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../ui/dialog.js';
+import { toast } from 'sonner';
 
 interface QuestionEditorProps {
   initialData?: QuestionDTO | null;
@@ -107,18 +108,56 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     }
   };
 
+  const handleFillSample = () => {
+    const rand = Math.floor(100 + Math.random() * 900);
+    setValue('code', `BCS-46-MATH-${rand}`);
+    setValue('titleEn', 'What is the sum of internal angles of a hexagon?');
+    setValue('titleBn', 'একটি সুষম ষড়ভুজের অন্তঃকোণগুলোর সমষ্টি কত?');
+    setValue('type', 'MCQ_SINGLE');
+    setValue('categoryId', 'cat-1');
+    setValue('examId', 'exam-1');
+    setValue('subjectId', 'sub-1');
+    setValue('topicId', 'top-1');
+    setValue('chapterId', 'chap-1');
+    setValue('difficulty', 'MEDIUM');
+    setValue('positiveMarks', 1.0);
+    setValue('negativeMarks', 0.25);
+    setValue('status', 'PUBLISHED');
+    setValue('options', [
+      { id: 'opt-1', textEn: '720°', textBn: '৭২০°', isCorrect: true },
+      { id: 'opt-2', textEn: '540°', textBn: '৫৪০°', isCorrect: false },
+      { id: 'opt-3', textEn: '360°', textBn: '৩৬০°', isCorrect: false },
+      { id: 'opt-4', textEn: '900°', textBn: '৯০০°', isCorrect: false },
+    ]);
+    setValue('explanationEn', 'Formula: (n - 2) * 180° = (6 - 2) * 180° = 4 * 180° = 720°.');
+    setValue('explanationBn', 'সূত্র: (n - ২) × ১৮০° = (৬ - ২) × ১৮০° = ৭২০°।');
+    setValue('tags', 'Geometry, Hexagon, BCS-46');
+    toast.success('Sample question populated! Click "Save Question" to save.');
+  };
+
+  const onError = (formErrors: any) => {
+    const errorKeys = Object.keys(formErrors);
+    if (errorKeys.length > 0) {
+      const firstErr = formErrors[errorKeys[0]];
+      const msg = firstErr?.message || `Please check field: ${errorKeys[0]}`;
+      toast.error(`Validation Error: ${msg}`);
+    }
+  };
+
   const onSubmit = (formData: QuestionFormValues) => {
     const parsedTags = (formData.tags || '')
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const safeBn = formData.titleBn?.trim() || formData.titleEn;
+
     const fullQuestion: QuestionDTO = {
       id: initialData?.id || `q-${Date.now()}`,
       code: formData.code,
       type: formData.type,
       titleEn: formData.titleEn,
-      titleBn: formData.titleBn,
+      titleBn: safeBn,
       categoryId: formData.categoryId,
       examId: formData.examId,
       subjectId: formData.subjectId,
@@ -131,11 +170,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       positiveMarks: formData.positiveMarks,
       negativeMarks: formData.negativeMarks,
       status: formData.status,
-      options: formData.options,
-      explanationEn: formData.explanationEn,
-      explanationBn: formData.explanationBn,
+      options: formData.options.map((opt) => ({
+        ...opt,
+        textBn: opt.textBn?.trim() || opt.textEn,
+      })),
+      explanationEn: formData.explanationEn || '',
+      explanationBn: formData.explanationBn || '',
       tags: parsedTags,
-      imageUrl: formData.imageUrl,
+      imageUrl: formData.imageUrl || '',
       createdAt: initialData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -162,6 +204,17 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {!initialData && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFillSample}
+              className="h-8 gap-1 text-xs text-orange-400 border-orange-800/60 bg-orange-950/30 hover:bg-orange-900/40"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Quick Sample
+            </Button>
+          )}
           {initialData && onDuplicate && (
             <Button
               type="button"
@@ -185,9 +238,9 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <Button
             type="button"
             size="sm"
-            onClick={handleSubmit(onSubmit as any)}
+            onClick={handleSubmit(onSubmit as any, onError)}
             disabled={isSubmitting}
-            className="h-8 gap-1.5 text-xs bg-orange-600 hover:bg-orange-700 shadow-md shadow-orange-600/20"
+            className="h-8 gap-1.5 text-xs bg-orange-600 hover:bg-orange-700 shadow-md shadow-orange-600/20 text-white font-medium"
           >
             <Save className="h-3.5 w-3.5" /> Save Question
           </Button>

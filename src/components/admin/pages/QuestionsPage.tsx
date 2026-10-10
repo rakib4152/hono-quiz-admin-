@@ -229,7 +229,6 @@ export const QuestionsPage: React.FC<QuestionsPageProps> = ({
         data={filtered}
         totalCount={filtered.length}
         pageSize={10}
-        currentPage={1}
         searchPlaceholder="Search question text in English or বাংলা..."
         bulkActions={[
           {
