@@ -165,7 +165,7 @@ model Quiz {
   attempts    QuizAttempt[]
   orders      Order[]
   access      QuizAccess[]
-  savedBy     SavedQuiz[]
+  savedBy     SavedQuiz[]å
   leaderboard LeaderboardEntry[]
 
   @@unique([examId, slug])
