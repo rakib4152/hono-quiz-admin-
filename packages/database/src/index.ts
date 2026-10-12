@@ -5,7 +5,8 @@
  * Provides:
  * - Isolate-level singleton PrismaClient caching to prevent connection exhaustion
  * - Cloudflare Hyperdrive & DATABASE_URL resolution
- * - Driver adapter & Edge runtime compatibility
+ * - Driver adapter & Edge runtime compatibility for Hostinger MySQL (u427015050_quiz)
+ * - Diagnostic connectivity probe for phpMyAdmin / remote MySQL debugging
  * - Re-exported Prisma types for cross-microservice usage
  */
 
@@ -85,13 +86,19 @@ export function getPrismaClient(
       return cached;
     }
 
-    const newClient = new PrismaClient({
-      datasourceUrl,
-      log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-    });
-
-    clientCache.set(datasourceUrl, newClient);
-    return newClient;
+    try {
+      const newClient = new PrismaClient({
+        datasourceUrl,
+        log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
+      });
+      clientCache.set(datasourceUrl, newClient);
+      return newClient;
+    } catch (err) {
+      // In case of constructor error (e.g., binary engine in edge sandbox without adapter),
+      // re-throw with actionable details
+      console.error('[Prisma Init Error] Failed to initialize PrismaClient with datasourceUrl:', err);
+      throw err;
+    }
   }
 
   // 2. Fallback to global singleton if no URL was explicitly passed
@@ -102,6 +109,22 @@ export function getPrismaClient(
   }
 
   return globalClient;
+}
+
+/**
+ * Runs an active diagnostic ping (SELECT 1) against the database to confirm
+ * credentials, network routing, and MySQL responsiveness.
+ */
+export async function verifyDatabaseConnection(
+  prisma: PrismaClient
+): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  const start = Date.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true, latencyMs: Date.now() - start };
+  } catch (err: any) {
+    return { ok: false, latencyMs: Date.now() - start, error: err?.message || String(err) };
+  }
 }
 
 /**
