@@ -330,3 +330,109 @@ export const quizService = {
     return { status: 404, data: { success: false, error: 'Quiz route not found', correlationId } };
   },
 };
+
+/**
+ * Cloudflare Worker Entry Point (Wrangler dev / production)
+ * - Immediate CORS preflight (OPTIONS) response (HTTP 204)
+ * - Normalizes /api/v1/* and /api/* route prefixes
+ * - Attaches Access-Control-Allow-Origin: http://localhost:3000 to all outgoing responses
+ */
+export interface WorkerEnv {
+  CORS_ALLOWED_ORIGINS?: string;
+  ENVIRONMENT?: string;
+  [key: string]: any;
+}
+
+export default {
+  async fetch(request: Request, env: WorkerEnv = {}): Promise<Response> {
+    const origin = request.headers.get('Origin') || '';
+    const allowedOrigin =
+      env.CORS_ALLOWED_ORIGINS ||
+      (origin.includes('localhost') ? origin : 'http://localhost:3000');
+
+    const corsHeaders: Record<string, string> = {
+      'Access-Control-Allow-Origin': allowedOrigin || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, X-Request-ID, X-Correlation-ID, X-User-Role, X-Idempotency-Key',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+    };
+
+    // 1. Immediately handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
+
+    const url = new URL(request.url);
+    let path = url.pathname;
+
+    // 2. Normalize route paths by stripping API prefixes (/api/v1 or /api)
+    if (path.startsWith('/api/v1')) {
+      path = path.slice('/api/v1'.length);
+    } else if (path.startsWith('/api')) {
+      path = path.slice('/api'.length);
+    }
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+
+    // 3. Parse JSON request body if present
+    let body: any = null;
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+      try {
+        const text = await request.text();
+        if (text) {
+          body = JSON.parse(text);
+        }
+      } catch {
+        body = null;
+      }
+    }
+
+    const correlationId =
+      request.headers.get('X-Correlation-ID') ||
+      request.headers.get('X-Request-ID') ||
+      crypto.randomUUID();
+    const userRole = request.headers.get('X-User-Role') || undefined;
+
+    // 4. Delegate to quizService handler
+    try {
+      const result = await quizService.handle({
+        path,
+        method: request.method,
+        body,
+        query: url.searchParams,
+        correlationId,
+        userRole,
+      });
+
+      return new Response(JSON.stringify(result.data), {
+        status: result.status,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'X-Correlation-ID': correlationId,
+          ...corsHeaders,
+        },
+      });
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: err?.message || 'Internal Quiz Service Error',
+          correlationId,
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+  },
+};
