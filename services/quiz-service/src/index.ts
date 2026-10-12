@@ -5,6 +5,19 @@
  */
 
 import { QuizStatus } from '../../../packages/shared-types/src/index.js';
+import { PrismaClient } from '@prisma/client';
+
+// Edge-compatible singleton instance for Cloudflare Worker isolate
+let prismaClientInstance: PrismaClient | null = null;
+
+export function getPrismaClient(databaseUrl?: string): PrismaClient {
+  if (!prismaClientInstance) {
+    prismaClientInstance = new PrismaClient(
+      databaseUrl ? { datasourceUrl: databaseUrl } : undefined
+    );
+  }
+  return prismaClientInstance;
+}
 
 interface CategoryEntity {
   id: string;
@@ -184,16 +197,97 @@ quizDb.quizQuestions.set(`${quizModel1.id}_${q1.id}`, {
 });
 
 export const quizService = {
-  async handle(req: { path: string; method: string; body?: any; query?: URLSearchParams; correlationId: string; userRole?: string }) {
-    const { path, method, body, query, correlationId, userRole } = req;
+  async handle(req: {
+    path: string;
+    method: string;
+    body?: any;
+    query?: URLSearchParams;
+    correlationId: string;
+    userRole?: string;
+    prisma?: PrismaClient;
+  }) {
+    const { path, method, body, query, correlationId, userRole, prisma } = req;
 
     // GET /categories
     if (path === '/categories' && method === 'GET') {
+      if (prisma) {
+        try {
+          const categories = await prisma.category.findMany({
+            orderBy: { createdAt: 'desc' },
+          });
+          return {
+            status: 200,
+            data: { success: true, count: categories.length, data: categories, correlationId },
+          };
+        } catch (dbErr: any) {
+          console.warn('[Prisma] Fallback to in-memory:', dbErr?.message);
+        }
+      }
       return { status: 200, data: { success: true, data: Array.from(quizDb.categories.values()), correlationId } };
+    }
+
+    // POST /categories
+    if (path === '/categories' && method === 'POST') {
+      const { name, slug } = body || {};
+      if (!name) {
+        return { status: 400, data: { success: false, error: 'Category name is required', correlationId } };
+      }
+      const categorySlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      if (prisma) {
+        try {
+          const created = await prisma.category.create({
+            data: {
+              name,
+              slug: categorySlug,
+            },
+          });
+          return { status: 201, data: { success: true, data: created, correlationId } };
+        } catch (dbErr: any) {
+          console.warn('[Prisma] Fallback to in-memory for creation:', dbErr?.message);
+        }
+      }
+
+      const newCat: CategoryEntity = {
+        id: `cat_${Date.now()}`,
+        name,
+        slug: categorySlug,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      quizDb.categories.set(newCat.id, newCat);
+      return { status: 201, data: { success: true, data: newCat, correlationId } };
     }
 
     // GET /exams
     if (path === '/exams' && method === 'GET') {
+      if (prisma) {
+        try {
+          const exams = await prisma.exam.findMany({
+            include: {
+              category: true,
+              _count: {
+                select: { quizzes: true },
+              },
+            },
+            orderBy: { name: 'asc' },
+          });
+          const mappedExams = exams.map((e) => ({
+            id: e.id,
+            categoryId: e.categoryId,
+            name: e.name,
+            slug: e.slug,
+            description: e.description,
+            categoryName: e.category?.name || 'General',
+            quizzesCount: e._count?.quizzes || 0,
+            status: 'ACTIVE',
+          }));
+          return { status: 200, data: { success: true, count: mappedExams.length, data: mappedExams, correlationId } };
+        } catch (dbErr: any) {
+          console.warn('[Prisma] Exams fallback to in-memory:', dbErr?.message);
+        }
+      }
+
       const examsList = Array.from(quizDb.exams.values()).map((e) => {
         const cat = quizDb.categories.get(e.categoryId);
         const count = Array.from(quizDb.quizzes.values()).filter((q) => q.examId === e.id).length;
@@ -338,6 +432,8 @@ export const quizService = {
  * - Attaches Access-Control-Allow-Origin: http://localhost:3000 to all outgoing responses
  */
 export interface WorkerEnv {
+  DATABASE_URL?: string;
+  HYPERDRIVE?: { connectionString: string };
   CORS_ALLOWED_ORIGINS?: string;
   ENVIRONMENT?: string;
   [key: string]: any;
@@ -399,6 +495,10 @@ export default {
       crypto.randomUUID();
     const userRole = request.headers.get('X-User-Role') || undefined;
 
+    // Resolve Prisma connection from Hyperdrive binding or DATABASE_URL
+    const dbUrl = env.HYPERDRIVE?.connectionString || env.DATABASE_URL;
+    const prisma = dbUrl ? getPrismaClient(dbUrl) : undefined;
+
     // 4. Delegate to quizService handler
     try {
       const result = await quizService.handle({
@@ -408,6 +508,7 @@ export default {
         query: url.searchParams,
         correlationId,
         userRole,
+        prisma,
       });
 
       return new Response(JSON.stringify(result.data), {
