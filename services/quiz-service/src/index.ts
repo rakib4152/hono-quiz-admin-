@@ -5,19 +5,7 @@
  */
 
 import { QuizStatus } from '../../../packages/shared-types/src/index.js';
-import { PrismaClient } from '@prisma/client';
-
-// Edge-compatible singleton instance for Cloudflare Worker isolate
-let prismaClientInstance: PrismaClient | null = null;
-
-export function getPrismaClient(databaseUrl?: string): PrismaClient {
-  if (!prismaClientInstance) {
-    prismaClientInstance = new PrismaClient(
-      databaseUrl ? { datasourceUrl: databaseUrl } : undefined
-    );
-  }
-  return prismaClientInstance;
-}
+import { getPrismaClient, type PrismaClient } from '../../../packages/database/src/index.js';
 
 interface CategoryEntity {
   id: string;
@@ -272,7 +260,7 @@ export const quizService = {
             },
             orderBy: { name: 'asc' },
           });
-          const mappedExams = exams.map((e) => ({
+          const mappedExams = exams.map((e: any) => ({
             id: e.id,
             categoryId: e.categoryId,
             name: e.name,

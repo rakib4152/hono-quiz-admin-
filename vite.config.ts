@@ -8,6 +8,8 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
+        '@quiz/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
+        '@packages/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
         '@': path.resolve(__dirname, '.'),
       },
     },

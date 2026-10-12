@@ -25,6 +25,12 @@
       ],
       "@prisma/client/edge": [
         "./node_modules/@prisma/client/edge"
+      ],
+      "@quiz/database": [
+        "./packages/database/src/index.ts"
+      ],
+      "@packages/database": [
+        "./packages/database/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,
