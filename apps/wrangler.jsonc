@@ -1,5 +1,5 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "quiz-platform-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-02-14",
@@ -9,12 +9,11 @@
   "observability": {
     "enabled": true
   },
- 
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "quiz-db-hyperdrive-id",
-      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/postgres"
+      "localConnectionString": "mysql://root:password@127.0.0.1:3306/quiz_db"
     }
   ],
   "kv_namespaces": [
@@ -30,8 +29,8 @@
     }
   ],
   "vars": {
-    "ENVIRONMENT": "production",
+    "ENVIRONMENT": "development",
     "API_VERSION": "v1",
-    "CORS_ALLOWED_ORIGINS": "https://admin.example.com,https://quiz.example.com"
+    "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3002,http://localhost:5173"
   }
 }
