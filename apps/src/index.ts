@@ -20,7 +20,21 @@ import { quizService } from '../../services/quiz-service/src/index.js';
 import { attemptService } from '../../services/attempt-service/src/index.js';
 import { paymentService } from '../../services/payment-service/src/index.js';
 import { analyticsService } from '../../services/analytics-service/src/index.js';
-import { getPrismaClient, resolveDatabaseUrl, verifyDatabaseConnection } from '../../packages/database/src/index.js';
+import {
+  getPrismaClient,
+  createPrismaClientWithAdapter,
+  resolveDatabaseUrl,
+  verifyDatabaseConnection,
+  PrismaMysql,
+} from '../../packages/database/src/index.js';
+
+export {
+  getPrismaClient,
+  createPrismaClientWithAdapter,
+  resolveDatabaseUrl,
+  verifyDatabaseConnection,
+  PrismaMysql,
+};
 
 const startupTime = Date.now();
 

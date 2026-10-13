@@ -3,14 +3,21 @@
  * Shared Edge-Ready Database Utility for Cloudflare Workers, Wrangler & Node.js
  * 
  * Provides:
- * - Isolate-level singleton PrismaClient caching to prevent connection exhaustion
+ * - Prisma Driver Adapter using `mysql2/promise` (@prisma/adapter-mysql)
+ * - Isolate-level dynamic PrismaClient caching to prevent connection exhaustion
  * - Cloudflare Hyperdrive & DATABASE_URL resolution
- * - Driver adapter & Edge runtime compatibility for Hostinger MySQL (u427015050_quiz)
+ * - Edge runtime compatibility for Hostinger MySQL (u427015050_quiz)
  * - Diagnostic connectivity probe for phpMyAdmin / remote MySQL debugging
  * - Re-exported Prisma types for cross-microservice usage
  */
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaMysql } from './adapter-mysql.js';
+import mysql from 'mysql2/promise';
+
+export { PrismaMysql };
+export * from './adapter-mysql.js';
+export { PrismaClient };
 
 export interface DatabaseEnv {
   DATABASE_URL?: string;
@@ -30,6 +37,9 @@ export interface DatabaseClientOptions {
 
 /** Cache of initialized Prisma instances keyed by connection string */
 const clientCache = new Map<string, PrismaClient>();
+
+/** Cache of mysql2 connection pools keyed by connection string */
+const poolCache = new Map<string, mysql.Pool>();
 
 /** Default fallback singleton instance */
 let globalClient: PrismaClient | null = null;
@@ -55,11 +65,34 @@ export function resolveDatabaseUrl(env?: DatabaseEnv): string {
 }
 
 /**
- * Retrieves or creates a singleton PrismaClient instance for the Cloudflare Worker isolate.
- * Reuses the active client across requests in the same isolate to prevent connection pooling exhaustion.
+ * Creates a new PrismaClient with the MySQL2 driver adapter.
+ * This adapter runs directly in Cloudflare Workers using TCP sockets (nodejs_compat).
+ */
+export function createPrismaClientWithAdapter(
+  connectionString: string,
+  logQueries = false
+): PrismaClient {
+  let pool = poolCache.get(connectionString);
+  if (!pool) {
+    pool = mysql.createPool(connectionString);
+    poolCache.set(connectionString, pool);
+  }
+
+  const adapter = new PrismaMysql(pool);
+
+  return new PrismaClient({
+    adapter: adapter as any,
+    log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
+  });
+}
+
+/**
+ * Retrieves or dynamically creates a PrismaClient instance for the Cloudflare Worker isolate.
+ * Designed to be called dynamically inside request handlers using `c.env.HYPERDRIVE.connectionString`
+ * or `c.env.DATABASE_URL`, reusing the active client per connection string in the worker isolate.
  *
  * @param options DatabaseClientOptions, connection string, or DatabaseEnv bindings
- * @returns Cached singleton PrismaClient
+ * @returns Edge-compatible PrismaClient configured with mysql2 adapter
  */
 export function getPrismaClient(
   options?: string | DatabaseClientOptions | DatabaseEnv
@@ -79,7 +112,7 @@ export function getPrismaClient(
     }
   }
 
-  // 1. If a specific datasource URL was resolved, cache and reuse by URL
+  // 1. If connection string was resolved, use driver adapter and cache in isolate
   if (datasourceUrl) {
     const cached = clientCache.get(datasourceUrl);
     if (cached) {
@@ -87,25 +120,35 @@ export function getPrismaClient(
     }
 
     try {
-      const newClient = new PrismaClient({
-        datasourceUrl,
-        log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-      });
-      clientCache.set(datasourceUrl, newClient);
-      return newClient;
-    } catch (err) {
-      // In case of constructor error (e.g., binary engine in edge sandbox without adapter),
-      // re-throw with actionable details
-      console.error('[Prisma Init Error] Failed to initialize PrismaClient with datasourceUrl:', err);
-      throw err;
+      const client = createPrismaClientWithAdapter(datasourceUrl, logQueries);
+      clientCache.set(datasourceUrl, client);
+      return client;
+    } catch (adapterErr) {
+      console.warn('[Prisma Init] Driver adapter initialization warning, attempting direct client:', adapterErr);
+      try {
+        const fallbackClient = new PrismaClient({
+          datasourceUrl,
+          log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
+        });
+        clientCache.set(datasourceUrl, fallbackClient);
+        return fallbackClient;
+      } catch (err) {
+        console.error('[Prisma Init Error] Failed to initialize PrismaClient:', err);
+        throw err;
+      }
     }
   }
 
-  // 2. Fallback to global singleton if no URL was explicitly passed
+  // 2. Fallback to singleton instance if no specific URL was resolved
   if (!globalClient) {
-    globalClient = new PrismaClient({
-      log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-    });
+    const defaultUrl = resolveDatabaseUrl();
+    if (defaultUrl) {
+      globalClient = createPrismaClientWithAdapter(defaultUrl, logQueries);
+    } else {
+      globalClient = new PrismaClient({
+        log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
+      });
+    }
   }
 
   return globalClient;
@@ -128,7 +171,7 @@ export async function verifyDatabaseConnection(
 }
 
 /**
- * Gracefully disconnects all cached Prisma clients (used during shutdown / tests).
+ * Gracefully disconnects all cached Prisma clients and mysql2 pools.
  */
 export async function disconnectAll(): Promise<void> {
   const disconnectPromises = Array.from(clientCache.values()).map((client) => client.$disconnect());
@@ -138,7 +181,8 @@ export async function disconnectAll(): Promise<void> {
   await Promise.all(disconnectPromises);
   clientCache.clear();
   globalClient = null;
-}
 
-// Re-export PrismaClient for consumer services
-export { PrismaClient };
+  const poolEndPromises = Array.from(poolCache.values()).map((pool) => pool.end());
+  await Promise.all(poolEndPromises);
+  poolCache.clear();
+}
