@@ -1,27 +1,40 @@
 /**
  * Microservice: Quiz Content Service
- * Database: Hostinger MySQL (u427015050_quiz) via Prisma ORM / Hyperdrive
+ * Database: Hostinger MySQL (u427015050_quiz) via Drizzle ORM / Hyperdrive
  * Models: Category, Exam, Subject, Topic, Quiz, Question, Option, QuizQuestion
  * Responsibilities: Content authoring, taxonomy, offline content packages, scoring keys
  * 
  * Strict Persistence Rule:
- * - Write operations (POST, PUT, PATCH, DELETE) MUST write directly to MySQL via Prisma.
+ * - Write operations (POST, PUT, PATCH, DELETE) MUST write directly to MySQL via Drizzle ORM.
  * - Silent in-memory fallbacks are REMOVED for all writes.
  * - Connection and query errors return explicit HTTP 500/409 responses with full diagnostic logs.
  */
 
 import { QuizStatus } from '../../../packages/shared-types/src/index.js';
 import {
-  getPrismaClient,
+  createDrizzleClient,
+  type DrizzleDB,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
+  categories,
+  exams,
+  subjects,
+  topics,
+  quizzes,
+  questions,
+  options,
+  quizQuestions,
+  getPrismaClient,
   type PrismaClient,
 } from '../../../packages/database/src/index.js';
+import { eq, desc, asc, inArray } from 'drizzle-orm';
 
 export {
-  getPrismaClient,
+  createDrizzleClient,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
+  type DrizzleDB,
+  getPrismaClient,
   type PrismaClient,
 };
 
@@ -148,28 +161,22 @@ const sub1: SubjectEntity = {
   name: 'Bangla Language & Literature',
   slug: 'bangla-language-literature',
 };
-const sub2: SubjectEntity = {
-  id: 'sub_english',
-  name: 'English Language & Literature',
-  slug: 'english-language-literature',
-};
 quizDb.subjects.set(sub1.id, sub1);
-quizDb.subjects.set(sub2.id, sub2);
 
 const top1: TopicEntity = {
-  id: 'top_bangla_gram',
+  id: 'top_bangla_lit',
   subjectId: sub1.id,
-  name: 'Bangla Grammar & Syntax (ব্যাকরণ)',
-  slug: 'bangla-grammar',
+  name: 'Ancient & Medieval Literature',
+  slug: 'ancient-medieval-literature',
 };
 quizDb.topics.set(top1.id, top1);
 
 const q1: QuestionEntity = {
-  id: 'q_001',
+  id: 'q_charyapada_01',
   subjectId: sub1.id,
   topicId: top1.id,
-  body: '‘চর্যাপদ’ কোন ছন্দে রচিত?',
-  explanation: 'চর্যাপদ প্রধানত মাত্রাবৃত্ত ছন্দে (পাদাকুলক ছন্দ) রচিত হয়েছে। এটি হরপ্রসাদ শাস্ত্রী ১৯০৭ সালে নেপাল থেকে আবিষ্কার করেন।',
+  body: 'Who discovered the manuscript of Charyapada in 1907?',
+  explanation: 'Haraprasad Shastri discovered the Charyapada manuscript in 1907 from the royal library of Nepal.',
   difficulty: 2,
   marks: 1.0,
   imageUrl: null,
@@ -179,18 +186,50 @@ const q1: QuestionEntity = {
 };
 quizDb.questions.set(q1.id, q1);
 
-quizDb.options.set('opt_001_1', { id: 'opt_001_1', questionId: q1.id, text: 'অক্ষরবৃত্ত ছন্দ', imageUrl: null, isCorrect: false, position: 1 });
-quizDb.options.set('opt_001_2', { id: 'opt_001_2', questionId: q1.id, text: 'মাত্রাবৃত্ত ছন্দ (পাদাকুলক)', imageUrl: null, isCorrect: true, position: 2 });
-quizDb.options.set('opt_001_3', { id: 'opt_001_3', questionId: q1.id, text: 'স্বরবৃত্ত ছন্দ', imageUrl: null, isCorrect: false, position: 3 });
-quizDb.options.set('opt_001_4', { id: 'opt_001_4', questionId: q1.id, text: 'অমিত্রাক্ষর ছন্দ', imageUrl: null, isCorrect: false, position: 4 });
+const opt1_1: OptionEntity = {
+  id: 'opt_1',
+  questionId: q1.id,
+  text: 'Haraprasad Shastri',
+  imageUrl: null,
+  isCorrect: true,
+  position: 1,
+};
+const opt1_2: OptionEntity = {
+  id: 'opt_2',
+  questionId: q1.id,
+  text: 'Suniti Kumar Chatterji',
+  imageUrl: null,
+  isCorrect: false,
+  position: 2,
+};
+const opt1_3: OptionEntity = {
+  id: 'opt_3',
+  questionId: q1.id,
+  text: 'Muhammad Shahidullah',
+  imageUrl: null,
+  isCorrect: false,
+  position: 3,
+};
+const opt1_4: OptionEntity = {
+  id: 'opt_4',
+  questionId: q1.id,
+  text: 'Sukumar Sen',
+  imageUrl: null,
+  isCorrect: false,
+  position: 4,
+};
+quizDb.options.set(opt1_1.id, opt1_1);
+quizDb.options.set(opt1_2.id, opt1_2);
+quizDb.options.set(opt1_3.id, opt1_3);
+quizDb.options.set(opt1_4.id, opt1_4);
 
 const quizModel1: QuizEntity = {
-  id: 'quiz_bcs_model_01',
+  id: 'quiz_bcs_preli_model_01',
   examId: exam1.id,
-  title: '47th BCS Preliminary Live Mock Test - 01',
-  slug: '47th-bcs-preliminary-live-mock-01',
-  description: 'Full-length 200 marks live simulation with real-time percentile ranking and negative marking.',
-  status: 'PUBLISHED',
+  title: '47th BCS Prelims Master Model Test #1',
+  slug: '47th-bcs-prelims-model-1',
+  description: 'Full syllabus timed simulation with real-time percentile computation & negative marks',
+  status: 'PUBLISHED' as QuizStatus,
   price: 0,
   currency: 'BDT',
   durationSeconds: 7200,
@@ -213,66 +252,57 @@ quizDb.quizQuestions.set(`${quizModel1.id}_${q1.id}`, {
 });
 
 /**
- * Diagnostic helper to format Prisma errors consistently with HTTP status codes
+ * ID generator helper for CUID/UUID strings
  */
-function handlePrismaWriteError(
+function generateId(prefix: string): string {
+  const rand = Math.random().toString(36).substring(2, 10);
+  const time = Date.now().toString(36);
+  return `${prefix}_${time}${rand}`.slice(0, 30);
+}
+
+/**
+ * Diagnostic helper to format Drizzle/MySQL errors consistently with HTTP status codes
+ */
+function handleDbWriteError(
   dbErr: any,
   operation: string,
   correlationId: string
 ) {
-  console.error(`[Prisma Database Error] Write failed for ${operation}:`, {
+  console.error(`[Drizzle Database Error] Write failed for ${operation}:`, {
     message: dbErr?.message,
     code: dbErr?.code,
-    meta: dbErr?.meta,
-    name: dbErr?.name,
-    stack: dbErr?.stack,
+    errno: dbErr?.errno,
+    sqlState: dbErr?.sqlState,
   });
 
-  // Unique constraint violation (e.g. slug or name duplicate in MySQL)
-  if (dbErr?.code === 'P2002') {
-    const target = Array.isArray(dbErr?.meta?.target)
-      ? dbErr.meta.target.join(', ')
-      : dbErr?.meta?.target || 'field';
+  // Unique constraint violation (e.g. duplicate slug or email)
+  if (dbErr?.code === 'ER_DUP_ENTRY' || dbErr?.errno === 1062 || dbErr?.code === 'P2002') {
     return {
       status: 409,
       data: {
         success: false,
-        error: `Unique constraint violation: A record with this ${target} already exists in Hostinger MySQL.`,
-        code: 'P2002',
-        target,
+        error: `Unique constraint violation: A record with this value already exists in Hostinger MySQL.`,
+        code: 'ER_DUP_ENTRY',
         correlationId,
       },
     };
   }
 
   // Foreign key constraint failed (e.g. invalid categoryId or examId)
-  if (dbErr?.code === 'P2003') {
+  if (dbErr?.code === 'ER_NO_REFERENCED_ROW_2' || dbErr?.errno === 1452 || dbErr?.code === 'P2003') {
     return {
       status: 400,
       data: {
         success: false,
-        error: `Foreign key constraint failed on ${dbErr?.meta?.field_name || 'relation'}. Verify that the referenced record exists.`,
-        code: 'P2003',
+        error: `Foreign key constraint failed on relation. Verify that the referenced record exists.`,
+        code: 'ER_NO_REFERENCED_ROW_2',
         correlationId,
       },
     };
   }
 
-  // Record not found during update/delete
-  if (dbErr?.code === 'P2025') {
-    return {
-      status: 404,
-      data: {
-        success: false,
-        error: 'The requested record was not found in the database.',
-        code: 'P2025',
-        correlationId,
-      },
-    };
-  }
-
-  // Database connection failure (P1001: Connection refused, P1002: Connection timed out, P1003: Database does not exist)
-  if (dbErr?.code && dbErr.code.startsWith('P1')) {
+  // Connection errors (ECONNREFUSED, ETIMEDOUT, etc.)
+  if (['ECONNREFUSED', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST'].includes(dbErr?.code) || (dbErr?.code && String(dbErr.code).startsWith('P1'))) {
     return {
       status: 500,
       data: {
@@ -288,14 +318,12 @@ function handlePrismaWriteError(
     };
   }
 
-  // Generic Prisma execution error - return real error message instead of faking success
   return {
     status: 500,
     data: {
       success: false,
-      error: dbErr?.message || 'Database execution failure in Prisma ORM',
-      code: dbErr?.code || 'PRISMA_EXECUTION_ERROR',
-      meta: dbErr?.meta,
+      error: dbErr?.message || 'Database execution failure in Drizzle ORM',
+      code: dbErr?.code || 'DRIZZLE_EXECUTION_ERROR',
       correlationId,
     },
   };
@@ -309,14 +337,16 @@ export const quizService = {
     query?: URLSearchParams;
     correlationId: string;
     userRole?: string;
-    prisma?: PrismaClient;
+    db?: DrizzleDB;
+    prisma?: any;
   }): Promise<{ status: number; data: any }> {
-    const { path, method, body, query, correlationId, userRole, prisma } = req;
+    const { path, method, body, query, correlationId, userRole } = req;
+    const db = req.db || req.prisma;
 
-    // Helper: Require Prisma database client for state-mutating write operations
-    const requirePrisma = () => {
-      if (!prisma) {
-        console.error('[Prisma Guard] State-mutating write rejected: PrismaClient is not configured.');
+    // Helper: Require database client for state-mutating write operations
+    const requireDb = () => {
+      if (!db) {
+        console.error('[Database Guard] State-mutating write rejected: Drizzle database client is not configured.');
         return {
           status: 500,
           data: {
@@ -325,7 +355,7 @@ export const quizService = {
             code: 'DB_CLIENT_UNAVAILABLE',
             diagnostic: {
               targetDatabase: 'u427015050_quiz',
-              actionRequired: 'Provide DATABASE_URL in wrangler.jsonc or .env to connect to Hostinger MySQL.',
+              actionRequired: 'Provide DATABASE_URL or HYPERDRIVE binding in wrangler.jsonc or .env to connect to Hostinger MySQL.',
             },
             correlationId,
           },
@@ -338,19 +368,19 @@ export const quizService = {
     // DIAGNOSTIC ENDPOINT: GET /db-health
     // -------------------------------------------------------------
     if (path === '/db-health' && method === 'GET') {
-      if (!prisma) {
+      if (!db) {
         return {
           status: 500,
           data: {
             success: false,
             connected: false,
-            error: 'Prisma client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
+            error: 'Drizzle client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
             targetDatabase: 'u427015050_quiz',
             correlationId,
           },
         };
       }
-      const probe = await verifyDatabaseConnection(prisma);
+      const probe = await verifyDatabaseConnection(db);
       return {
         status: probe.ok ? 200 : 500,
         data: {
@@ -370,28 +400,38 @@ export const quizService = {
 
     // GET /categories
     if (path === '/categories' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const categories = await prisma.category.findMany({
-            include: {
-              _count: {
-                select: { exams: true },
-              },
+          const dbCategories = await db.query.categories.findMany({
+            with: {
+              exams: true,
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: [desc(categories.createdAt)],
           });
+
+          const mapped = dbCategories.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+            _count: {
+              exams: c.exams?.length || 0,
+            },
+          }));
+
           return {
             status: 200,
             data: {
               success: true,
               source: 'mysql',
-              count: categories.length,
-              data: categories,
+              count: mapped.length,
+              data: mapped,
               correlationId,
             },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /categories query failed:', dbErr);
+          console.error('[Drizzle Error] GET /categories query failed:', dbErr);
           return {
             status: 500,
             data: {
@@ -404,7 +444,7 @@ export const quizService = {
         }
       }
 
-      // Read fallback only if prisma binding is explicitly absent
+      // Read fallback only if db binding is explicitly absent
       return {
         status: 200,
         data: {
@@ -419,7 +459,7 @@ export const quizService = {
 
     // POST /categories (STRICT WRITE: Guaranteed MySQL or 500/409 error)
     if (path === '/categories' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const { name, slug } = body || {};
@@ -434,15 +474,17 @@ export const quizService = {
         (slug && typeof slug === 'string' && slug.trim()) ||
         name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+      const newId = body.id || generateId('cat');
+
       try {
-        const created = await prisma!.category.create({
-          data: {
-            name: name.trim(),
-            slug: categorySlug,
-          },
+        await db!.insert(categories).values({
+          id: newId,
+          name: name.trim(),
+          slug: categorySlug,
         });
 
-        // Mirror to local cache purely for hot reads, never masking write
+        const [created] = await db!.select().from(categories).where(eq(categories.id, newId)).limit(1);
+
         quizDb.categories.set(created.id, {
           id: created.id,
           name: created.name,
@@ -462,21 +504,19 @@ export const quizService = {
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'category.create', correlationId);
+        return handleDbWriteError(dbErr, 'category.create', correlationId);
       }
     }
 
     // DELETE /categories/:id
     const matchCategoryDelete = path.match(/^\/categories\/([^/]+)$/);
     if (matchCategoryDelete && method === 'DELETE') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const categoryId = matchCategoryDelete[1];
       try {
-        await prisma!.category.delete({
-          where: { id: categoryId },
-        });
+        await db!.delete(categories).where(eq(categories.id, categoryId));
         quizDb.categories.delete(categoryId);
         return {
           status: 200,
@@ -487,7 +527,7 @@ export const quizService = {
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, `category.delete(${categoryId})`, correlationId);
+        return handleDbWriteError(dbErr, `category.delete(${categoryId})`, correlationId);
       }
     }
 
@@ -497,27 +537,27 @@ export const quizService = {
 
     // GET /exams
     if (path === '/exams' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const exams = await prisma.exam.findMany({
-            include: {
+          const dbExams = await db.query.exams.findMany({
+            with: {
               category: true,
-              _count: {
-                select: { quizzes: true },
-              },
+              quizzes: true,
             },
-            orderBy: { name: 'asc' },
+            orderBy: [asc(exams.name)],
           });
-          const mappedExams = exams.map((e: any) => ({
+
+          const mappedExams = dbExams.map((e: any) => ({
             id: e.id,
             categoryId: e.categoryId,
             name: e.name,
             slug: e.slug,
             description: e.description,
             categoryName: e.category?.name || 'General',
-            quizzesCount: e._count?.quizzes || 0,
+            quizzesCount: e.quizzes?.length || 0,
             status: 'ACTIVE',
           }));
+
           return {
             status: 200,
             data: {
@@ -529,7 +569,7 @@ export const quizService = {
             },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /exams query failed:', dbErr);
+          console.error('[Drizzle Error] GET /exams query failed:', dbErr);
           return {
             status: 500,
             data: {
@@ -561,7 +601,7 @@ export const quizService = {
 
     // POST /exams (STRICT WRITE: Guaranteed MySQL or 500/409 error)
     if (path === '/exams' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const { categoryId, name, slug, description } = body || {};
@@ -576,18 +616,18 @@ export const quizService = {
         (slug && typeof slug === 'string' && slug.trim()) ||
         name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+      const newId = body.id || generateId('exam');
+
       try {
-        const created = await prisma!.exam.create({
-          data: {
-            categoryId,
-            name: name.trim(),
-            slug: examSlug,
-            description: description || null,
-          },
-          include: {
-            category: true,
-          },
+        await db!.insert(exams).values({
+          id: newId,
+          categoryId,
+          name: name.trim(),
+          slug: examSlug,
+          description: description || null,
         });
+
+        const [created] = await db!.select().from(exams).where(eq(exams.id, newId)).limit(1);
 
         quizDb.exams.set(created.id, {
           id: created.id,
@@ -608,21 +648,19 @@ export const quizService = {
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'exam.create', correlationId);
+        return handleDbWriteError(dbErr, 'exam.create', correlationId);
       }
     }
 
     // DELETE /exams/:id
     const matchExamDelete = path.match(/^\/exams\/([^/]+)$/);
     if (matchExamDelete && method === 'DELETE') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const examId = matchExamDelete[1];
       try {
-        await prisma!.exam.delete({
-          where: { id: examId },
-        });
+        await db!.delete(exams).where(eq(exams.id, examId));
         quizDb.exams.delete(examId);
         return {
           status: 200,
@@ -633,7 +671,7 @@ export const quizService = {
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, `exam.delete(${examId})`, correlationId);
+        return handleDbWriteError(dbErr, `exam.delete(${examId})`, correlationId);
       }
     }
 
@@ -643,21 +681,17 @@ export const quizService = {
 
     // GET /subjects
     if (path === '/subjects' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const subjects = await prisma.subject.findMany({
-            include: {
-              topics: true,
-              _count: { select: { questions: true } },
-            },
-            orderBy: { name: 'asc' },
+          const dbSubjects = await db.query.subjects.findMany({
+            orderBy: [asc(subjects.name)],
           });
           return {
             status: 200,
-            data: { success: true, source: 'mysql', data: subjects, correlationId },
+            data: { success: true, source: 'mysql', data: dbSubjects, correlationId },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /subjects failed:', dbErr);
+          console.error('[Drizzle Error] GET /subjects failed:', dbErr);
           return {
             status: 500,
             data: { success: false, error: dbErr?.message, correlationId },
@@ -672,7 +706,7 @@ export const quizService = {
 
     // POST /subjects
     if (path === '/subjects' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const { name, slug } = body || {};
@@ -680,34 +714,38 @@ export const quizService = {
         return { status: 400, data: { success: false, error: 'Subject name is required', correlationId } };
       }
       const subjectSlug = slug || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const newId = body.id || generateId('sub');
 
       try {
-        const created = await prisma!.subject.create({
-          data: { name: name.trim(), slug: subjectSlug },
+        await db!.insert(subjects).values({
+          id: newId,
+          name: name.trim(),
+          slug: subjectSlug,
         });
+        const [created] = await db!.select().from(subjects).where(eq(subjects.id, newId)).limit(1);
         return {
           status: 201,
           data: { success: true, persistedToDatabase: true, data: created, correlationId },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'subject.create', correlationId);
+        return handleDbWriteError(dbErr, 'subject.create', correlationId);
       }
     }
 
     // GET /topics
     if (path === '/topics' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const topics = await prisma.topic.findMany({
-            include: { subject: true },
-            orderBy: { name: 'asc' },
+          const dbTopics = await db.query.topics.findMany({
+            with: { subject: true },
+            orderBy: [asc(topics.name)],
           });
           return {
             status: 200,
-            data: { success: true, source: 'mysql', data: topics, correlationId },
+            data: { success: true, source: 'mysql', data: dbTopics, correlationId },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /topics failed:', dbErr);
+          console.error('[Drizzle Error] GET /topics failed:', dbErr);
           return {
             status: 500,
             data: { success: false, error: dbErr?.message, correlationId },
@@ -722,7 +760,7 @@ export const quizService = {
 
     // POST /topics
     if (path === '/topics' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const { subjectId, name, slug } = body || {};
@@ -730,18 +768,22 @@ export const quizService = {
         return { status: 400, data: { success: false, error: 'subjectId and name are required', correlationId } };
       }
       const topicSlug = slug || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const newId = body.id || generateId('top');
 
       try {
-        const created = await prisma!.topic.create({
-          data: { subjectId, name: name.trim(), slug: topicSlug },
-          include: { subject: true },
+        await db!.insert(topics).values({
+          id: newId,
+          subjectId,
+          name: name.trim(),
+          slug: topicSlug,
         });
+        const [created] = await db!.select().from(topics).where(eq(topics.id, newId)).limit(1);
         return {
           status: 201,
           data: { success: true, persistedToDatabase: true, data: created, correlationId },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'topic.create', correlationId);
+        return handleDbWriteError(dbErr, 'topic.create', correlationId);
       }
     }
 
@@ -751,20 +793,20 @@ export const quizService = {
 
     // GET /quizzes
     if (path === '/quizzes' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const quizzes = await prisma.quiz.findMany({
-            include: {
+          const dbQuizzes = await db.query.quizzes.findMany({
+            with: {
               exam: {
-                include: { category: true },
+                with: { category: true },
               },
-              _count: {
-                select: { questions: true, attempts: true },
-              },
+              quizQuestions: true,
+              attempts: true,
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: [desc(quizzes.createdAt)],
           });
-          const mapped = quizzes.map((q: any) => ({
+
+          const mapped = dbQuizzes.map((q: any) => ({
             id: q.id,
             examId: q.examId,
             examName: q.exam?.name || 'General Exam',
@@ -778,11 +820,12 @@ export const quizService = {
             durationSeconds: q.durationSeconds,
             passPercentage: q.passPercentage,
             negativeMark: q.negativeMark,
-            totalQuestions: q._count?.questions || 0,
-            attemptsCount: q._count?.attempts || 0,
+            totalQuestions: q.quizQuestions?.length || 0,
+            attemptsCount: q.attempts?.length || 0,
             createdAt: q.createdAt,
             publishedAt: q.publishedAt,
           }));
+
           return {
             status: 200,
             data: {
@@ -794,7 +837,7 @@ export const quizService = {
             },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /quizzes query failed:', dbErr);
+          console.error('[Drizzle Error] GET /quizzes query failed:', dbErr);
           return {
             status: 500,
             data: {
@@ -826,7 +869,7 @@ export const quizService = {
 
     // POST /quizzes (STRICT WRITE)
     if (path === '/quizzes' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const {
@@ -853,25 +896,25 @@ export const quizService = {
         (slug && typeof slug === 'string' && slug.trim()) ||
         title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+      const newId = body.id || generateId('quiz');
+
       try {
-        const created = await prisma!.quiz.create({
-          data: {
-            examId,
-            title: title.trim(),
-            slug: quizSlug,
-            description: description || null,
-            status: status as any,
-            price: Number(price) || 0,
-            currency: String(currency || 'BDT').toUpperCase(),
-            durationSeconds: durationSeconds ? Number(durationSeconds) : null,
-            passPercentage: passPercentage ? Number(passPercentage) : null,
-            negativeMark: Number(negativeMark) || 0,
-            publishedAt: status === 'PUBLISHED' ? new Date() : null,
-          },
-          include: {
-            exam: true,
-          },
+        await db!.insert(quizzes).values({
+          id: newId,
+          examId,
+          title: title.trim(),
+          slug: quizSlug,
+          description: description || null,
+          status: status as any,
+          price: Number(price) || 0,
+          currency: String(currency || 'BDT').toUpperCase(),
+          durationSeconds: durationSeconds ? Number(durationSeconds) : null,
+          passPercentage: passPercentage ? Number(passPercentage) : null,
+          negativeMark: Number(negativeMark) || 0,
+          publishedAt: status === 'PUBLISHED' ? new Date() : null,
         });
+
+        const [created] = await db!.select().from(quizzes).where(eq(quizzes.id, newId)).limit(1);
 
         quizDb.quizzes.set(created.id, {
           id: created.id,
@@ -904,7 +947,7 @@ export const quizService = {
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'quiz.create', correlationId);
+        return handleDbWriteError(dbErr, 'quiz.create', correlationId);
       }
     }
 
@@ -913,23 +956,16 @@ export const quizService = {
     if (matchQuiz && method === 'GET') {
       const quizId = matchQuiz[1];
 
-      if (prisma) {
+      if (db) {
         try {
-          const quiz = await prisma.quiz.findUnique({
-            where: { id: quizId },
-            include: {
-              exam: { include: { category: true } },
-              questions: {
-                include: {
-                  question: {
-                    include: {
-                      options: {
-                        orderBy: { position: 'asc' },
-                      },
-                    },
-                  },
-                },
-                orderBy: { position: 'asc' },
+          const quiz = await db.query.quizzes.findFirst({
+            where: eq(quizzes.id, quizId),
+            with: {
+              exam: {
+                with: { category: true },
+              },
+              quizQuestions: {
+                orderBy: (qq: any, { asc }: any) => [asc(qq.position)],
               },
             },
           });
@@ -941,36 +977,50 @@ export const quizService = {
             };
           }
 
-          const questions = quiz.questions.map((qq: any) => {
-            const q = qq.question;
-            const options = q.options.map((o: any) => ({
-              id: o.id,
-              text: o.text,
-              imageUrl: o.imageUrl,
-              position: o.position,
-              // Never leak isCorrect to candidate learners
-              isCorrect: userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' ? o.isCorrect : undefined,
-            }));
-            return {
-              id: q.id,
-              position: qq.position,
-              body: q.body,
-              marks: qq.marks || q.marks,
-              options,
-            };
-          });
+          const questionIds = quiz.quizQuestions?.map((qq: any) => qq.questionId) || [];
+          let questionsList: any[] = [];
+          if (questionIds.length > 0) {
+            const dbQuestions = await db.query.questions.findMany({
+              where: inArray(questions.id, questionIds),
+              with: {
+                options: {
+                  orderBy: (opts: any, { asc }: any) => [asc(opts.position)],
+                },
+              },
+            });
+
+            const qMap = new Map(dbQuestions.map((q: any) => [q.id, q]));
+            questionsList = quiz.quizQuestions.map((qq: any) => {
+              const q: any = qMap.get(qq.questionId);
+              if (!q) return null;
+              const opts = (q.options || []).map((o: any) => ({
+                id: o.id,
+                text: o.text,
+                imageUrl: o.imageUrl,
+                position: o.position,
+                isCorrect: userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' ? o.isCorrect : undefined,
+              }));
+              return {
+                id: q.id,
+                position: qq.position,
+                body: q.body,
+                marks: qq.marks || q.marks,
+                options: opts,
+              };
+            }).filter(Boolean);
+          }
 
           return {
             status: 200,
             data: {
               success: true,
               source: 'mysql',
-              data: { ...quiz, questions },
+              data: { ...quiz, questions: questionsList },
               correlationId,
             },
           };
         } catch (dbErr: any) {
-          console.error(`[Prisma Error] GET /quizzes/${quizId} failed:`, dbErr);
+          console.error(`[Drizzle Error] GET /quizzes/${quizId} failed:`, dbErr);
           return {
             status: 500,
             data: { success: false, error: dbErr?.message, correlationId },
@@ -985,7 +1035,7 @@ export const quizService = {
         .filter((qq) => qq.quizId === quizId)
         .sort((a, b) => a.position - b.position);
 
-      const questions = assigned.map((qq) => {
+      const questionsList = assigned.map((qq) => {
         const q = quizDb.questions.get(qq.questionId);
         if (!q) return null;
         const opts = Array.from(quizDb.options.values())
@@ -1008,26 +1058,25 @@ export const quizService = {
         };
       }).filter(Boolean);
 
-      return { status: 200, data: { success: true, source: 'in-memory-fallback', data: { ...quiz, questions }, correlationId } };
+      return { status: 200, data: { success: true, source: 'in-memory-fallback', data: { ...quiz, questions: questionsList }, correlationId } };
     }
 
     // DELETE /quizzes/:quizId
     if (matchQuiz && method === 'DELETE') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const quizId = matchQuiz[1];
       try {
-        await prisma!.quiz.delete({
-          where: { id: quizId },
-        });
+        await db!.delete(quizQuestions).where(eq(quizQuestions.quizId, quizId));
+        await db!.delete(quizzes).where(eq(quizzes.id, quizId));
         quizDb.quizzes.delete(quizId);
         return {
           status: 200,
           data: { success: true, deletedId: quizId, correlationId },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, `quiz.delete(${quizId})`, correlationId);
+        return handleDbWriteError(dbErr, `quiz.delete(${quizId})`, correlationId);
       }
     }
 
@@ -1037,30 +1086,30 @@ export const quizService = {
 
     // GET /questions
     if (path === '/questions' && method === 'GET') {
-      if (prisma) {
+      if (db) {
         try {
-          const questions = await prisma.question.findMany({
-            include: {
+          const dbQuestions = await db.query.questions.findMany({
+            with: {
               subject: true,
               topic: true,
               options: {
-                orderBy: { position: 'asc' },
+                orderBy: (opts: any, { asc }: any) => [asc(opts.position)],
               },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: [desc(questions.createdAt)],
           });
           return {
             status: 200,
             data: {
               success: true,
               source: 'mysql',
-              count: questions.length,
-              data: questions,
+              count: dbQuestions.length,
+              data: dbQuestions,
               correlationId,
             },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] GET /questions failed:', dbErr);
+          console.error('[Drizzle Error] GET /questions failed:', dbErr);
           return {
             status: 500,
             data: { success: false, error: dbErr?.message, correlationId },
@@ -1081,7 +1130,7 @@ export const quizService = {
 
     // POST /questions (STRICT WRITE: atomic question + options)
     if (path === '/questions' && method === 'POST') {
-      const dbUnavailable = requirePrisma();
+      const dbUnavailable = requireDb();
       if (dbUnavailable) return dbUnavailable;
 
       const {
@@ -1091,7 +1140,7 @@ export const quizService = {
         explanation,
         difficulty = 1,
         marks = 1.0,
-        options = [],
+        options: rawOptions = [],
       } = body || {};
 
       if (!subjectId || !questionBody) {
@@ -1101,30 +1150,38 @@ export const quizService = {
         };
       }
 
+      const newQuestionId = body.id || generateId('q');
+
       try {
-        const created = await prisma!.question.create({
-          data: {
-            subjectId,
-            topicId: topicId || null,
-            body: questionBody,
-            explanation: explanation || null,
-            difficulty: Number(difficulty) || 1,
-            marks: Number(marks) || 1.0,
-            options: {
-              create: (options || []).map((opt: any, index: number) => ({
-                text: opt.text || '',
-                isCorrect: !!opt.isCorrect,
-                position: opt.position || index + 1,
-                imageUrl: opt.imageUrl || null,
-              })),
-            },
-          },
-          include: {
-            options: true,
-            subject: true,
-            topic: true,
-          },
+        await db!.insert(questions).values({
+          id: newQuestionId,
+          subjectId,
+          topicId: topicId || null,
+          body: questionBody,
+          explanation: explanation || null,
+          difficulty: Number(difficulty) || 1,
+          marks: Number(marks) || 1.0,
         });
+
+        const insertedOptions: any[] = [];
+        if (Array.isArray(rawOptions) && rawOptions.length > 0) {
+          for (let i = 0; i < rawOptions.length; i++) {
+            const opt = rawOptions[i];
+            const optId = opt.id || generateId('opt');
+            const optValues = {
+              id: optId,
+              questionId: newQuestionId,
+              text: opt.text || '',
+              isCorrect: !!opt.isCorrect,
+              position: opt.position || i + 1,
+              imageUrl: opt.imageUrl || null,
+            };
+            await db!.insert(options).values(optValues);
+            insertedOptions.push(optValues);
+          }
+        }
+
+        const [created] = await db!.select().from(questions).where(eq(questions.id, newQuestionId)).limit(1);
 
         return {
           status: 201,
@@ -1132,12 +1189,15 @@ export const quizService = {
             success: true,
             persistedToDatabase: true,
             database: 'u427015050_quiz',
-            data: created,
+            data: {
+              ...created,
+              options: insertedOptions,
+            },
             correlationId,
           },
         };
       } catch (dbErr: any) {
-        return handlePrismaWriteError(dbErr, 'question.create', correlationId);
+        return handleDbWriteError(dbErr, 'question.create', correlationId);
       }
     }
 
@@ -1148,7 +1208,7 @@ export const quizService = {
       const quiz = quizDb.quizzes.get(quizId);
       if (!quiz) return { status: 404, data: { success: false, error: 'Quiz not found', correlationId } };
 
-      const questions = Array.from(quizDb.quizQuestions.values())
+      const questionsList = Array.from(quizDb.quizQuestions.values())
         .filter((qq) => qq.quizId === quizId)
         .map((qq) => {
           const q = quizDb.questions.get(qq.questionId);
@@ -1167,7 +1227,7 @@ export const quizService = {
             packageVersion: 'v1.0.0',
             generatedAt: new Date().toISOString(),
             quiz: { id: quiz.id, title: quiz.title, durationSeconds: quiz.durationSeconds, negativeMark: quiz.negativeMark },
-            questions,
+            questions: questionsList,
           },
           correlationId,
         },
@@ -1181,18 +1241,12 @@ export const quizService = {
         return { status: 400, data: { success: false, error: 'quizId is required', correlationId } };
       }
 
-      if (prisma) {
+      if (db) {
         try {
-          const quiz = await prisma.quiz.findUnique({
-            where: { id: targetQuizId },
-            include: {
-              questions: {
-                include: {
-                  question: {
-                    include: { options: true },
-                  },
-                },
-              },
+          const quiz = await db.query.quizzes.findFirst({
+            where: eq(quizzes.id, targetQuizId),
+            with: {
+              quizQuestions: true,
             },
           });
 
@@ -1200,14 +1254,26 @@ export const quizService = {
             return { status: 404, data: { success: false, error: 'Quiz not found', correlationId } };
           }
 
-          const keys = quiz.questions.map((qq: any) => {
-            const correctOpt = qq.question.options.find((o: any) => o.isCorrect);
-            return {
-              questionId: qq.questionId,
-              marks: qq.marks || qq.question.marks || 1.0,
-              correctOptionId: correctOpt?.id || null,
-            };
-          });
+          const qIds = quiz.quizQuestions?.map((qq: any) => qq.questionId) || [];
+          let keys: any[] = [];
+          if (qIds.length > 0) {
+            const dbQuestions = await db.query.questions.findMany({
+              where: inArray(questions.id, qIds),
+              with: {
+                options: true,
+              },
+            });
+            const qMap = new Map(dbQuestions.map((q: any) => [q.id, q]));
+            keys = quiz.quizQuestions.map((qq: any) => {
+              const q: any = qMap.get(qq.questionId);
+              const correctOpt = q?.options?.find((o: any) => o.isCorrect);
+              return {
+                questionId: qq.questionId,
+                marks: qq.marks || q?.marks || 1.0,
+                correctOptionId: correctOpt?.id || null,
+              };
+            });
+          }
 
           return {
             status: 200,
@@ -1224,7 +1290,7 @@ export const quizService = {
             },
           };
         } catch (dbErr: any) {
-          console.error('[Prisma Error] Internal scoring keys failed:', dbErr);
+          console.error('[Drizzle Error] Internal scoring keys failed:', dbErr);
           return {
             status: 500,
             data: { success: false, error: dbErr?.message, correlationId },
@@ -1266,7 +1332,7 @@ export const quizService = {
  * Cloudflare Worker Entry Point (Wrangler dev / production)
  * - Immediate CORS preflight (OPTIONS) response (HTTP 204)
  * - Normalizes /api/v1/* and /api/* route prefixes
- * - Initialized PrismaClient singleton with Hostinger MySQL / Hyperdrive bindings
+ * - Initialized Drizzle client with Hostinger MySQL / Hyperdrive bindings
  * - Guarantees full error diagnostic payload on failure (no faked 201 successes)
  */
 export interface WorkerEnv {
@@ -1347,15 +1413,12 @@ export default {
       crypto.randomUUID();
     const userRole = request.headers.get('X-User-Role') || undefined;
 
-    // 4. Safely resolve Prisma Client without crashing Edge runtime
-    let prisma: PrismaClient | undefined = undefined;
-    const dbUrl = resolveDatabaseUrl(env);
-    if (dbUrl) {
-      try {
-        prisma = getPrismaClient(dbUrl);
-      } catch (initErr) {
-        console.error('[Worker Gateway] Failed to instantiate PrismaClient:', initErr);
-      }
+    // 4. Safely resolve Drizzle Client using Hyperdrive or DATABASE_URL
+    let db: DrizzleDB | undefined = undefined;
+    try {
+      db = createDrizzleClient(env);
+    } catch (initErr) {
+      console.error('[Worker Gateway] Failed to instantiate Drizzle client:', initErr);
     }
 
     // 5. Delegate to quizService handler
@@ -1367,7 +1430,7 @@ export default {
         query: url.searchParams,
         correlationId,
         userRole,
-        prisma,
+        db,
       });
 
       return new Response(JSON.stringify(result.data), {

@@ -21,15 +21,19 @@ import { attemptService } from '../../services/attempt-service/src/index.js';
 import { paymentService } from '../../services/payment-service/src/index.js';
 import { analyticsService } from '../../services/analytics-service/src/index.js';
 import {
-  getPrismaClient,
+  createDrizzleClient,
+  type DrizzleDB,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
+  getPrismaClient,
 } from '../../packages/database/src/index.js';
 
 export {
-  getPrismaClient,
+  createDrizzleClient,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
+  type DrizzleDB,
+  getPrismaClient,
 };
 
 const startupTime = Date.now();
@@ -147,15 +151,12 @@ export default {
       }
     }
 
-    // 3. Resolve Prisma Client for Hostinger MySQL (u427015050_quiz) via Hyperdrive or DATABASE_URL
-    let prisma: any = undefined;
-    const dbUrl = resolveDatabaseUrl(env as any);
-    if (dbUrl) {
-      try {
-        prisma = getPrismaClient(dbUrl);
-      } catch (err) {
-        console.error('[Worker Gateway] Failed to instantiate PrismaClient:', err);
-      }
+    // 3. Resolve Drizzle DB Client for Hostinger MySQL (u427015050_quiz) via Hyperdrive or DATABASE_URL
+    let db: DrizzleDB | undefined = undefined;
+    try {
+      db = createDrizzleClient(env as any);
+    } catch (err) {
+      console.error('[Worker Gateway] Failed to instantiate DrizzleClient:', err);
     }
 
     // 4. Token & user extraction from Authorization header
@@ -212,15 +213,15 @@ export default {
     }
 
     if (path === '/db-health') {
-      if (!prisma) {
+      if (!db) {
         return json({
           connected: false,
-          error: 'Prisma client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
+          error: 'Drizzle client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
           targetDatabase: 'u427015050_quiz',
           correlationId,
         }, 500);
       }
-      const probe = await verifyDatabaseConnection(prisma);
+      const probe = await verifyDatabaseConnection(db);
       return json({
         connected: probe.ok,
         latencyMs: probe.latencyMs,
@@ -283,7 +284,8 @@ export default {
         query: searchParams,
         correlationId,
         userRole: authenticatedUserRole,
-        prisma,
+        db,
+        prisma: db,
       });
       return json(res.data, res.status);
     }

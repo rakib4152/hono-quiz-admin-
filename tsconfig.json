@@ -29,6 +29,9 @@
       "@quiz/database": [
         "./packages/database/src/index.ts"
       ],
+      "@repo/database": [
+        "./packages/database/src/index.ts"
+      ],
       "@packages/database": [
         "./packages/database/src/index.ts"
       ]

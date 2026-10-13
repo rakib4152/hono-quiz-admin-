@@ -3,7 +3,11 @@
  */
 
 import { AppEnv } from '../env.js';
-import { resolveDatabaseUrl, getPrismaClient, verifyDatabaseConnection } from '../../../packages/database/src/index.js';
+import {
+  resolveDatabaseUrl,
+  createDrizzleClient,
+  verifyDatabaseConnection,
+} from '../../../packages/database/src/index.js';
 
 export async function handlePocCheck({
   env,
@@ -16,7 +20,7 @@ export async function handlePocCheck({
 }) {
   const connectionUrl = resolveDatabaseUrl(env as any);
 
-  if (!connectionUrl) {
+  if (!connectionUrl && !env?.HYPERDRIVE) {
     return json(
       {
         connected: false,
@@ -28,14 +32,14 @@ export async function handlePocCheck({
   }
 
   try {
-    const prisma = getPrismaClient(connectionUrl);
-    const probe = await verifyDatabaseConnection(prisma);
+    const db = createDrizzleClient(env);
+    const probe = await verifyDatabaseConnection(db);
 
     return json({
       connected: probe.ok,
       latencyMs: probe.latencyMs,
       database: 'u427015050_quiz',
-      driver: env?.HYPERDRIVE ? 'Cloudflare Hyperdrive (Accelerated Pooling)' : 'Direct MySQL TCP',
+      driver: env?.HYPERDRIVE ? 'Cloudflare Hyperdrive (Accelerated Pooling via Drizzle/mysql2)' : 'Direct MySQL TCP (Drizzle/mysql2)',
       sslEnabled: true,
       error: probe.error,
     }, probe.ok ? 200 : 500);
