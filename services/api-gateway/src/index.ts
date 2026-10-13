@@ -23,11 +23,14 @@ export const apiGateway = {
     const searchParams = url.searchParams;
 
     const correlationId = request.headers.get('x-correlation-id') || `corr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const origin = request.headers.get('origin') || request.headers.get('Origin') || '';
 
     const corsHeaders: Record<string, string> = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-ID, X-Idempotency-Key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-Correlation-ID, X-Idempotency-Key',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
       'X-Correlation-ID': correlationId,
     };
 

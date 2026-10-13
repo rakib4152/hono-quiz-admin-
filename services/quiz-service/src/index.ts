@@ -1274,15 +1274,27 @@ export interface WorkerEnv {
 export default {
   async fetch(request: Request, env: WorkerEnv = {}): Promise<Response> {
     const origin = request.headers.get('Origin') || '';
-    const allowedOrigin =
-      env.CORS_ALLOWED_ORIGINS ||
-      (origin.includes('localhost') ? origin : 'http://localhost:3000');
+    const rawOrigins = env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000';
+    const allowedOrigins = typeof rawOrigins === 'string'
+      ? rawOrigins.split(',').map((o) => o.trim()).filter(Boolean)
+      : [rawOrigins];
+
+    let matchedOrigin: string | null = null;
+    if (origin && allowedOrigins.includes(origin)) {
+      matchedOrigin = origin;
+    } else if (origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      matchedOrigin = origin;
+    } else if (!origin) {
+      matchedOrigin = allowedOrigins[0] || 'http://localhost:3000';
+    } else {
+      matchedOrigin = allowedOrigins[0] || null;
+    }
 
     const corsHeaders: Record<string, string> = {
-      'Access-Control-Allow-Origin': allowedOrigin || '*',
+      ...(matchedOrigin ? { 'Access-Control-Allow-Origin': matchedOrigin } : {}),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers':
-        'Content-Type, Authorization, X-Request-ID, X-Correlation-ID, X-User-Role, X-Idempotency-Key',
+        'Content-Type, Authorization, X-Requested-With, X-Request-ID, X-Correlation-ID, X-User-Role, X-Idempotency-Key',
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Max-Age': '86400',
     };
