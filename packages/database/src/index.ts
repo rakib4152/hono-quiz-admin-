@@ -1,82 +1,49 @@
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
-import * as schema from './schema.js';
+import { drizzle } from 'drizzle-orm/mysql2'
+import mysql from 'mysql2/promise'
+import { sql } from 'drizzle-orm'
+import * as schema from './schema'
 
-export * from './schema.js';
-export { schema };
+export * from './schema'
+export { schema }
 
 /**
  * Creates a Drizzle DB instance using Hyperdrive env or DATABASE_URL
  */
 export function createDrizzleClient(env: any) {
   if (env?.HYPERDRIVE) {
-    // If Hyperdrive provides individual credentials on Cloudflare Workers
-    if (env.HYPERDRIVE.host) {
-      const connection = mysql.createPool({
-        host: env.HYPERDRIVE.host,
-        user: env.HYPERDRIVE.user,
-        password: env.HYPERDRIVE.password,
-        database: env.HYPERDRIVE.database,
-        port: Number(env.HYPERDRIVE.port || 3306),
-        ssl: { rejectUnauthorized: false },
-      });
-      return drizzle(connection, { schema, mode: 'default' });
-    }
-
-    // If Hyperdrive provides connectionString
-    if (env.HYPERDRIVE.connectionString) {
-      const pool = mysql.createPool(env.HYPERDRIVE.connectionString);
-      return drizzle(pool, { schema, mode: 'default' });
-    }
+    const connection = mysql.createPool({
+      host: env.HYPERDRIVE.host,
+      user: env.HYPERDRIVE.user,
+      password: env.HYPERDRIVE.password,
+      database: env.HYPERDRIVE.database,
+      port: Number(env.HYPERDRIVE.port || 3306),
+      ssl: { rejectUnauthorized: false },
+    })
+    return drizzle(connection, { schema, mode: 'default' })
   }
 
-  // Local development / direct fallback string
-  const connectionString =
-    (typeof env === 'string' ? env : env?.DATABASE_URL) ||
-    (typeof process !== 'undefined' ? process.env?.DATABASE_URL : '');
+  const connectionString = env?.DATABASE_URL || process.env.DATABASE_URL
+  const pool = mysql.createPool(connectionString)
+  return drizzle(pool, { schema, mode: 'default' })
+}
 
-  if (!connectionString) {
-    console.warn('[Drizzle] No database connection string found in environment.');
+export type DrizzleDB = ReturnType<typeof createDrizzleClient>
+
+// Re-exported helper functions required by apps/src/routes/poc.ts
+export function resolveDatabaseUrl(env: any): string {
+  if (env?.HYPERDRIVE) {
+    const { user, password, host, port, database } = env.HYPERDRIVE
+    return `mysql://${user}:${password}@${host}:${port || 3306}/${database}`
   }
-
-  const pool = mysql.createPool(connectionString || 'mysql://root:password@127.0.0.1:3306/u427015050_quiz');
-  return drizzle(pool, { schema, mode: 'default' });
+  return env?.DATABASE_URL || process.env.DATABASE_URL || ''
 }
 
-export type DrizzleDB = ReturnType<typeof createDrizzleClient>;
-export type PrismaClient = any;
-
-/**
- * Backward compatibility helpers for services migrating from Prisma to Drizzle
- */
-export function resolveDatabaseUrl(env?: any): string {
-  if (env?.HYPERDRIVE?.connectionString) return env.HYPERDRIVE.connectionString;
-  if (env?.QUIZ_DATABASE_URL) return env.QUIZ_DATABASE_URL;
-  if (env?.DATABASE_URL) return env.DATABASE_URL;
-  if (typeof process !== 'undefined' && process.env?.DATABASE_URL) return process.env.DATABASE_URL;
-  return '';
-}
-
-export function getPrismaClient(connectionStringOrEnv?: any): any {
-  return createDrizzleClient(
-    typeof connectionStringOrEnv === 'string'
-      ? { DATABASE_URL: connectionStringOrEnv }
-      : connectionStringOrEnv
-  );
-}
-
-export async function verifyDatabaseConnection(
-  db: any
-): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
-  const start = Date.now();
+export async function verifyDatabaseConnection(db: DrizzleDB): Promise<boolean> {
   try {
-    if (db?.$queryRaw) {
-      await db.$queryRaw`SELECT 1`;
-    } else if (db?.execute) {
-      await db.execute('SELECT 1');
-    }
-    return { ok: true, latencyMs: Date.now() - start };
-  } catch (err: any) {
-    return { ok: false, latencyMs: Date.now() - start, error: err?.message || String(err) };
+    await db.execute(sql`SELECT 1`)
+    return true
+  } catch (error) {
+    console.error('Database connection verification failed:', error)
+    return false
   }
 }
