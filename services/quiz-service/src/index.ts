@@ -13,19 +13,15 @@
 import { QuizStatus } from '../../../packages/shared-types/src/index.js';
 import {
   getPrismaClient,
-  createPrismaClientWithAdapter,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
-  PrismaMysql,
   type PrismaClient,
 } from '../../../packages/database/src/index.js';
 
 export {
   getPrismaClient,
-  createPrismaClientWithAdapter,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
-  PrismaMysql,
   type PrismaClient,
 };
 

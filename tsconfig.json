@@ -26,9 +26,6 @@
       "@prisma/client/edge": [
         "./node_modules/@prisma/client/edge"
       ],
-      "@prisma/adapter-mysql": [
-        "./packages/database/src/adapter-mysql.ts"
-      ],
       "@quiz/database": [
         "./packages/database/src/index.ts"
       ],

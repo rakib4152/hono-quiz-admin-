@@ -14,7 +14,7 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      exclude: ['mysql2', 'mysql2/promise', '@prisma/client', '@prisma/adapter-mysql'],
+      exclude: ['@prisma/client'],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
