@@ -4,7 +4,8 @@
 // Foreign entities (userId, quizId, questionId) referenced as scalar VarChar(30) strings
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

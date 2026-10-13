@@ -4,7 +4,7 @@
  * 
  * Cloudflare Hyperdrive manages connection pooling, query caching, and TCP tunneling
  * at the edge network layer. No native Node.js TCP drivers (e.g. mysql2) or driver
- * adapters (@prisma/adapter-mysql) are required. PrismaClient simply overrides the
+ * adapters (@prisma/adapter-mysql) are required. PrismaClient overrides the
  * `datasourceUrl` with Hyperdrive's accelerated connection string.
  */
 
@@ -28,11 +28,8 @@ export interface DatabaseClientOptions {
   logQueries?: boolean;
 }
 
-/** Cache of active PrismaClient instances keyed by connection string */
+/** Cache of active PrismaClient instances keyed by connection string within the isolate */
 const clientCache = new Map<string, PrismaClient>();
-
-/** Default fallback singleton instance */
-let globalClient: PrismaClient | null = null;
 
 /**
  * Resolves the database connection string from environment bindings.
@@ -81,40 +78,28 @@ export function getPrismaClient(
       connectionString = opts.datasourceUrl || resolveDatabaseUrl(opts.env);
       logQueries = !!opts.logQueries;
     }
+  } else {
+    connectionString = resolveDatabaseUrl();
   }
 
-  // 1. Connection string provided: cache per connection string within the isolate
-  if (connectionString) {
-    const cached = clientCache.get(connectionString);
-    if (cached) {
-      return cached;
-    }
-
-    const client = new PrismaClient({
-      datasourceUrl: connectionString,
-      log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-    });
-
-    clientCache.set(connectionString, client);
-    return client;
+  if (!connectionString) {
+    throw new Error(
+      '[Prisma Edge Error] Missing connection string: DATABASE_URL or c.env.HYPERDRIVE.connectionString must be provided to instantiate PrismaClient in Cloudflare Workers.'
+    );
   }
 
-  // 2. Fallback to singleton instance if no specific URL was resolved
-  if (!globalClient) {
-    const defaultUrl = resolveDatabaseUrl();
-    if (defaultUrl) {
-      globalClient = new PrismaClient({
-        datasourceUrl: defaultUrl,
-        log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-      });
-    } else {
-      globalClient = new PrismaClient({
-        log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
-      });
-    }
+  const cached = clientCache.get(connectionString);
+  if (cached) {
+    return cached;
   }
 
-  return globalClient;
+  const client = new PrismaClient({
+    datasourceUrl: connectionString,
+    log: logQueries ? ['query', 'info', 'warn', 'error'] : ['error', 'warn'],
+  });
+
+  clientCache.set(connectionString, client);
+  return client;
 }
 
 /**
@@ -138,10 +123,6 @@ export async function verifyDatabaseConnection(
  */
 export async function disconnectAll(): Promise<void> {
   const disconnectPromises = Array.from(clientCache.values()).map((client) => client.$disconnect());
-  if (globalClient) {
-    disconnectPromises.push(globalClient.$disconnect());
-  }
   await Promise.all(disconnectPromises);
   clientCache.clear();
-  globalClient = null;
 }
