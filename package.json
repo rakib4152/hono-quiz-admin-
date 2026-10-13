@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "dev:frontend": "vite --port=3002 --host=0.0.0.0",
-    "dev:api": "wrangler dev --config apps/wrangler.jsonc --port 8787",
+    "dev:api": "wrangler dev --port 8787",
+    "dev:api:apps": "wrangler dev --config apps/wrangler.jsonc --port 8787",
     "dev:all": "concurrently -k -n \"FE,API\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:api\"",
     "build": "vite build",
     "preview": "vite preview",
@@ -55,6 +56,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "wrangler": "^4.150.0"
   }
 }

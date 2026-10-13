@@ -13,7 +13,7 @@
     {
       "binding": "HYPERDRIVE",
       "id": "quiz-db-hyperdrive-id",
-      "localConnectionString": "mysql://root:password@127.0.0.1:3306/quiz_db"
+      "localConnectionString": "mysql://root:password@127.0.0.1:3306/u427015050_quiz"
     }
   ],
   "kv_namespaces": [

@@ -1,24 +1,24 @@
 /**
  * Cloudflare Workers Hono Application Entry Point
  * Base Route: /api/v1
- * Models: User, Session, Device, Category, Exam, Subject, Topic, Quiz, Question,
- *         Option, QuizQuestion, QuizAttempt, AttemptAnswer, Order, Payment,
- *         QuizAccess, Bookmark, SavedQuiz, Badge, UserBadge, LeaderboardEntry, OfflineSync
+ * Microservices Architecture:
+ * - Auth Service: auth_db (User, Session, Device)
+ * - Quiz Service: quiz_db (Category, Exam, Subject, Topic, Quiz, Question, Option, QuizQuestion)
+ * - Attempt Service: attempt_db (QuizAttempt, AttemptAnswer, Bookmark, SavedQuiz, OfflineSync)
+ * - Payment Service: payment_db (Order, Payment, QuizAccess)
+ * - Analytics Service: analytics_db (Badge, UserBadge, LeaderboardEntry)
  */
 
 import { AppEnv } from './env.js';
 import { createHealthHandler } from './routes/health.js';
 import { handlePocCheck } from './routes/poc.js';
 
-import { handleAuthRoutes } from './modules/auth/router.js';
-import { handleCatalogRoutes } from './modules/catalog/router.js';
-import { handleQuizRoutes } from './modules/quizzes/router.js';
-import { handleQuestionRoutes } from './modules/questions/router.js';
-import { handleAttemptRoutes } from './modules/attempts/router.js';
-import { handlePaymentRoutes } from './modules/payments/router.js';
-import { handleUserFeaturesRoutes } from './modules/user-features/router.js';
+import { authService } from '../../services/auth-service/src/index.js';
 import { quizService } from '../../services/quiz-service/src/index.js';
-import { getPrismaClient, resolveDatabaseUrl } from '../../packages/database/src/index.js';
+import { attemptService } from '../../services/attempt-service/src/index.js';
+import { paymentService } from '../../services/payment-service/src/index.js';
+import { analyticsService } from '../../services/analytics-service/src/index.js';
+import { getPrismaClient, resolveDatabaseUrl, verifyDatabaseConnection } from '../../packages/database/src/index.js';
 
 const startupTime = Date.now();
 
@@ -37,31 +37,45 @@ export default {
     }
     if (!path.startsWith('/')) path = '/' + path;
 
+    const origin = request.headers.get('Origin') || '';
+    const allowedOrigin =
+      env?.CORS_ALLOWED_ORIGINS ||
+      (origin.includes('localhost') ? origin : 'http://localhost:3000');
+
     const corsHeaders: Record<string, string> = {
-      'Access-Control-Allow-Origin': env?.CORS_ALLOWED_ORIGINS || '*',
+      'Access-Control-Allow-Origin': allowedOrigin || '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-ID, X-Idempotency-Key',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, X-Request-ID, X-Correlation-ID, X-User-Role, X-Idempotency-Key',
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Max-Age': '86400',
     };
 
+    // 1. Immediate CORS preflight response
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
+
+    const correlationId =
+      request.headers.get('X-Correlation-ID') ||
+      request.headers.get('X-Request-ID') ||
+      `corr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     const json = (data: any, status = 200) => {
       return new Response(JSON.stringify(data, null, 2), {
         status,
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
-          'X-Powered-By': 'Hono/Workers/Prisma',
+          'X-Powered-By': 'Cloudflare-Workers-Hono',
+          'X-Correlation-ID': correlationId,
           ...corsHeaders,
         },
       });
     };
 
-    // Parse body for JSON requests
+    // 2. Parse request body if present
     let body: any = null;
-    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       try {
         const text = await request.text();
         if (text) body = JSON.parse(text);
@@ -70,112 +84,193 @@ export default {
       }
     }
 
-    // Health
-    if (path === '/health') {
-      return json(createHealthHandler(env, startupTime));
-    }
-
-    // Root info
-    if (path === '/' || path === '') {
-      return json({
-        service: 'Scalable Quiz Platform Production API',
-        version: '1.0.0',
-        runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Prisma)',
-        docs: '/api/v1/openapi.json',
-        modules: [
-          'auth',
-          'catalog',
-          'quizzes',
-          'questions',
-          'attempts',
-          'payments',
-          'bookmarks',
-          'offline-sync',
-          'leaderboards',
-        ],
-      });
-    }
-
-    // Phase 1 PoC check
-    if (path === '/poc/db-check') {
-      return handlePocCheck({ env, req: request, json });
-    }
-
-    // OpenAPI Spec
-    if (path === '/openapi.json') {
-      return json({
-        openapi: '3.0.3',
-        info: {
-          title: 'Quiz Platform Production API',
-          version: '1.0.0',
-          description: 'Hono + Prisma + Hostinger MySQL Quiz Platform API',
-        },
-        paths: {
-          '/api/v1/auth/register': { post: { summary: 'Register User' } },
-          '/api/v1/auth/login': { post: { summary: 'Login and issue session token' } },
-          '/api/v1/auth/me': { get: { summary: 'Get current user profile' } },
-          '/api/v1/categories': { get: { summary: 'List categories' }, post: { summary: 'Create category' } },
-          '/api/v1/exams': { get: { summary: 'List exams' }, post: { summary: 'Create exam' } },
-          '/api/v1/subjects': { get: { summary: 'List subjects' } },
-          '/api/v1/quizzes': { get: { summary: 'List quizzes' }, post: { summary: 'Create quiz' } },
-          '/api/v1/quizzes/{id}/start': { post: { summary: 'Start timed quiz attempt' } },
-          '/api/v1/attempts/{id}/answers': { post: { summary: 'Record candidate answer' } },
-          '/api/v1/attempts/{id}/submit': { post: { summary: 'Authoritative scoring & leaderboard update' } },
-          '/api/v1/orders': { post: { summary: 'Create paid quiz order' } },
-          '/api/v1/payments/verify': { post: { summary: 'Verify payment and grant QuizAccess' } },
-          '/api/v1/sync/attempts': { post: { summary: 'Offline attempt synchronization from SQLite' } },
-        },
-      });
-    }
-
-    // Initialize Prisma Client for Hostinger MySQL (u427015050_quiz)
+    // 3. Resolve Prisma Client for Hostinger MySQL (u427015050_quiz) via Hyperdrive or DATABASE_URL
     let prisma: any = undefined;
     const dbUrl = resolveDatabaseUrl(env as any);
     if (dbUrl) {
       try {
         prisma = getPrismaClient(dbUrl);
       } catch (err) {
-        console.error('[API Gateway] Prisma client init failed:', err);
+        console.error('[Worker Gateway] Failed to instantiate PrismaClient:', err);
       }
     }
 
-    // 1. Auth Module (User, Session, Device)
-    const authResult = handleAuthRoutes(path, method, body, request.headers);
-    if (authResult) return json(authResult.data, authResult.status);
+    // 4. Token & user extraction from Authorization header
+    const authHeader = request.headers.get('Authorization') || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    let authenticatedUserId: string | undefined;
+    let authenticatedUserRole: string | undefined;
 
-    // 2. Strict Content & Catalog Operations (Direct MySQL via quizService)
+    if (token) {
+      const verifyRes = await authService.handle({
+        path: '/internal/verify-token',
+        method: 'POST',
+        body: { token },
+        correlationId,
+      });
+      if (verifyRes.data.valid && verifyRes.data.user) {
+        authenticatedUserId = verifyRes.data.user.id;
+        authenticatedUserRole = verifyRes.data.user.role;
+      }
+    }
+
+    // 5. System Health Check
+    if (path === '/health') {
+      return json(createHealthHandler(env, startupTime));
+    }
+
+    // 6. Root Platform Information
+    if (path === '/' || path === '') {
+      return json({
+        service: 'Scalable Quiz Platform Production API',
+        version: env?.API_VERSION || 'v1',
+        runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Prisma)',
+        docs: '/api/v1/openapi.json',
+        health: '/api/v1/health',
+        dbHealth: '/api/v1/db-health',
+        bindings: {
+          kv: !!env?.CACHE_KV,
+          hyperdrive: !!env?.HYPERDRIVE,
+          r2: !!env?.ASSETS_R2,
+        },
+        services: [
+          'auth (/api/v1/auth)',
+          'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/quizzes)',
+          'attempts (/api/v1/quizzes/:id/start, /api/v1/attempts)',
+          'payments (/api/v1/orders, /api/v1/payments)',
+          'analytics (/api/v1/leaderboards, /api/v1/badges)',
+        ],
+      });
+    }
+
+    // 7. Database PoC & Connectivity Probes
+    if (path === '/poc/db-check') {
+      return handlePocCheck({ env, req: request, json });
+    }
+
+    if (path === '/db-health') {
+      if (!prisma) {
+        return json({
+          connected: false,
+          error: 'Prisma client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
+          targetDatabase: 'u427015050_quiz',
+          correlationId,
+        }, 500);
+      }
+      const probe = await verifyDatabaseConnection(prisma);
+      return json({
+        connected: probe.ok,
+        latencyMs: probe.latencyMs,
+        targetDatabase: 'u427015050_quiz',
+        error: probe.error,
+        correlationId,
+      }, probe.ok ? 200 : 500);
+    }
+
+    // 8. OpenAPI Specification
+    if (path === '/openapi.json') {
+      return json({
+        openapi: '3.0.3',
+        info: {
+          title: 'Quiz Platform Production API Gateway',
+          version: '1.0.0',
+          description: 'Cloudflare Workers Hono + Hostinger MySQL Microservices API',
+        },
+        paths: {
+          '/api/v1/health': { get: { summary: 'System Health Check' } },
+          '/api/v1/db-health': { get: { summary: 'Database Ping and Latency Probe' } },
+          '/api/v1/auth/register': { post: { summary: 'Register User' } },
+          '/api/v1/auth/login': { post: { summary: 'Login and issue session token' } },
+          '/api/v1/auth/me': { get: { summary: 'Get current user profile' } },
+          '/api/v1/categories': { get: { summary: 'List categories' }, post: { summary: 'Create category (Strict MySQL)' } },
+          '/api/v1/exams': { get: { summary: 'List exams' }, post: { summary: 'Create exam (Strict MySQL)' } },
+          '/api/v1/quizzes': { get: { summary: 'List quizzes' }, post: { summary: 'Create quiz (Strict MySQL)' } },
+          '/api/v1/questions': { get: { summary: 'List questions' }, post: { summary: 'Create question (Strict MySQL)' } },
+          '/api/v1/quizzes/{id}/start': { post: { summary: 'Start timed quiz attempt' } },
+          '/api/v1/attempts/{id}/answers': { post: { summary: 'Record candidate answer' } },
+          '/api/v1/attempts/{id}/submit': { post: { summary: 'Authoritative scoring & leaderboard update' } },
+          '/api/v1/orders': { post: { summary: 'Create paid quiz order' } },
+          '/api/v1/payments/verify': { post: { summary: 'Verify payment and grant QuizAccess' } },
+          '/api/v1/sync/attempts': { post: { summary: 'Offline attempt synchronization from SQLite' } },
+          '/api/v1/leaderboards/{id}': { get: { summary: 'Get quiz leaderboard' } },
+        },
+      });
+    }
+
+    // 9. Dispatch to Auth Service (User, Session, Device)
+    if (path.startsWith('/auth') || path.startsWith('/devices')) {
+      const res = await authService.handle({ path, method, body, token, correlationId });
+      return json(res.data, res.status);
+    }
+
+    // 10. Dispatch to Quiz Content Service (Strict MySQL with Prisma)
     if (
       path.startsWith('/categories') ||
       path.startsWith('/exams') ||
-      path.startsWith('/quizzes') ||
-      path.startsWith('/questions') ||
       path.startsWith('/subjects') ||
       path.startsWith('/topics') ||
-      path === '/db-health'
+      path.startsWith('/questions') ||
+      path === '/internal/quiz-scoring-keys' ||
+      (path.startsWith('/quizzes') && !path.includes('/attempts') && !path.includes('/start'))
     ) {
-      const quizResult = await quizService.handle({
+      const res = await quizService.handle({
         path,
         method,
         body,
         query: searchParams,
-        correlationId: request.headers.get('X-Correlation-ID') || crypto.randomUUID(),
-        userRole: request.headers.get('X-User-Role') || undefined,
+        correlationId,
+        userRole: authenticatedUserRole,
         prisma,
       });
-      return json(quizResult.data, quizResult.status);
+      return json(res.data, res.status);
     }
 
-    // 5. Attempts Module (QuizAttempt, AttemptAnswer)
-    const attemptResult = handleAttemptRoutes(path, method, body, request.headers);
-    if (attemptResult) return json(attemptResult.data, attemptResult.status);
+    // 11. Dispatch to Attempt Service (Attempts, Scoring, Offline Sync, Bookmarks)
+    if (
+      path.includes('/attempts') ||
+      path.includes('/bookmarks') ||
+      path.includes('/saved-quizzes') ||
+      path.startsWith('/sync') ||
+      (path.startsWith('/quizzes/') && path.endsWith('/start'))
+    ) {
+      const res = await attemptService.handle({
+        path,
+        method,
+        body,
+        correlationId,
+        userId: authenticatedUserId,
+      });
+      return json(res.data, res.status);
+    }
 
-    // 6. Payments Module (Order, Payment, QuizAccess)
-    const paymentResult = handlePaymentRoutes(path, method, body, searchParams, request.headers);
-    if (paymentResult) return json(paymentResult.data, paymentResult.status);
+    // 12. Dispatch to Payment Service (Orders, Payments, Webhooks, QuizAccess)
+    if (
+      path.startsWith('/orders') ||
+      path.startsWith('/payments') ||
+      path.startsWith('/webhooks') ||
+      path.includes('/quiz-access')
+    ) {
+      const res = await paymentService.handle({
+        path,
+        method,
+        body,
+        correlationId,
+        userId: authenticatedUserId,
+      });
+      return json(res.data, res.status);
+    }
 
-    // 7. User Features & Gamification (Bookmark, SavedQuiz, LeaderboardEntry, Badge, OfflineSync)
-    const userFeatureResult = handleUserFeaturesRoutes(path, method, body, searchParams, request.headers);
-    if (userFeatureResult) return json(userFeatureResult.data, userFeatureResult.status);
+    // 13. Dispatch to Analytics Service (Leaderboards, Badges)
+    if (path.startsWith('/leaderboards') || path.startsWith('/badges')) {
+      const res = await analyticsService.handle({
+        path,
+        method,
+        body,
+        correlationId,
+        userId: authenticatedUserId,
+      });
+      return json(res.data, res.status);
+    }
 
     return json({ error: 'Endpoint Not Found', path: `/api/v1${path}`, method }, 404);
   },
