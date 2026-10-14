@@ -189,6 +189,7 @@ app.all('/api/v1/attempts/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '', // TODO: extract from auth
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -200,6 +201,7 @@ app.all('/api/v1/bookmarks/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -211,6 +213,7 @@ app.all('/api/v1/saved-quizzes/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -222,6 +225,7 @@ app.all('/api/v1/sync/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -233,6 +237,7 @@ app.all('/api/v1/quizzes/*/start', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });

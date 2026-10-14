@@ -1,11 +1,14 @@
-import 'dotenv/config'
-import { defineConfig } from 'drizzle-kit'
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  out: './drizzle',
   schema: './packages/database/src/schema.ts',
+  out: './drizzle',
   dialect: 'mysql',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    host: 'srv1562.hstgr.io',
+    port: 3306,
+    user: 'u427015050_drizzlequiz',
+    password: 'R.r.4152',
+    database: 'u427015050_drizzle',
   },
-})
+});

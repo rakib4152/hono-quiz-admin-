@@ -18,18 +18,23 @@ export function createDrizzleClient(env: any) {
       database: env.HYPERDRIVE.database,
       port: Number(env.HYPERDRIVE.port || 3306),
       ssl: { rejectUnauthorized: false },
+      multipleStatements: true,
     })
     return drizzle(connection, { schema, mode: 'default' })
   }
 
   const connectionString = env?.DATABASE_URL || process.env.DATABASE_URL
-  const pool = mysql.createPool(connectionString)
+  const pool = mysql.createPool({
+    uri: connectionString,
+    multipleStatements: true,
+    charset: 'utf8mb4_general_ci',
+  })
   return drizzle(pool, { schema, mode: 'default' })
 }
 
 export type DrizzleDB = ReturnType<typeof createDrizzleClient>
 
-// Re-exported helper functions required by apps/src/routes/poc.ts
+// Export these functions so apps/src/routes/poc.ts can import them
 export function resolveDatabaseUrl(env: any): string {
   if (env?.HYPERDRIVE) {
     const { user, password, host, port, database } = env.HYPERDRIVE

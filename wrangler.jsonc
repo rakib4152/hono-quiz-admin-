@@ -1,36 +1,41 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "quiz-platform-api",
-  "main": "apps/src/index.ts",
-  "compatibility_date": "2025-02-14",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "observability": {
-    "enabled": true
-  },
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "quiz-db-hyperdrive-id",
-      "localConnectionString": "mysql://root:password@127.0.0.1:3306/u427015050_quiz"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE_KV",
-      "id": "quiz-cache-kv-id"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "ASSETS_R2",
-      "bucket_name": "quiz-assets-production"
-    }
-  ],
-  "vars": {
-    "ENVIRONMENT": "development",
-    "API_VERSION": "v1",
-    "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3002,http://localhost:5173"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "quiz-platform-api",
+	"main": "apps/src/index.ts",
+	"compatibility_date": "2025-02-14",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "e92a09fc692d4f4f8de9057e11d4a0aa",
+			"localConnectionString": "mysql://root:password@127.0.0.1:3306/u427015050_quiz"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE_KV",
+			"id": "quiz-cache-kv-id"
+		},
+		{
+			"binding": "quiz_cache",
+			"id": "9113d470147f41c59d8fdf385a0b25cb",
+			"remote": true
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "ASSETS_R2",
+			"bucket_name": "quiz-assets-production"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "development",
+		"API_VERSION": "v1",
+		"CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3002,http://localhost:5173"
+	}
 }

@@ -48,8 +48,8 @@ export const attemptDb = {
 };
 
 export const attemptService = {
-  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string }) {
-    const { path, method, body, correlationId, userId = 'usr_student1' } = req;
+  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string; env?: any }) {
+    const { path, method, body, correlationId, userId = 'usr_student1', env } = req;
 
     // POST /quizzes/:quizId/attempts (Start Quiz Attempt)
     const matchStart = path.match(/^\/quizzes\/([^/]+)\/attempts$/);
@@ -62,6 +62,7 @@ export const attemptService = {
         method: 'POST',
         body: { quizId },
         correlationId,
+        env,
       });
 
       if (!quizKeyRes.data.success || !quizKeyRes.data.quiz || !quizKeyRes.data.keys) {
@@ -181,6 +182,7 @@ export const attemptService = {
         method: 'POST',
         body: { quizId: attempt.quizId },
         correlationId,
+        env,
       });
 
       if (!keysRes.data.success || !keysRes.data.quiz || !keysRes.data.keys) {
@@ -287,6 +289,7 @@ export const attemptService = {
         method: 'POST',
         body: { quizId },
         correlationId,
+        env,
       });
 
       if (!keysRes.data.success || !keysRes.data.quiz || !keysRes.data.keys) {

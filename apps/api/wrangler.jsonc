@@ -1,8 +1,8 @@
 {
-  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "quiz-platform-api",
   "main": "src/index.ts",
-  "compatibility_date": "2025-02-14",
+  "compatibility_date": "2026-10-14",
   "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -12,20 +12,14 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "quiz-db-hyperdrive-id",
-      "localConnectionString": "mysql://root:password@127.0.0.1:3306/u427015050_quiz"
+      "id": "e92a09fc692d4f4f8de9057e11d4a0aa",
+      "localConnectionString": "mysql://u427015050_drizzlequiz:R.r.4152@srv1562.hstgr.io:3306/u427015050_drizzle"
     }
   ],
   "kv_namespaces": [
     {
-      "binding": "CACHE_KV",
-      "id": "quiz-cache-kv-id"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "ASSETS_R2",
-      "bucket_name": "quiz-assets-production"
+      "binding": "quiz_cache",
+      "id": "9113d470147f41c59d8fdf385a0b25cb"
     }
   ],
   "vars": {
