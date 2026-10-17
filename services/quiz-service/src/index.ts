@@ -1,14 +1,15 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { 
-  createDrizzleClient, 
-  categories, 
-  exams, 
-  quizzes,
-  questions,
-  options
-} from '@repo/database'
+   categories, 
+   exams, 
+   quizzes,
+   questions,
+   options,
+   quizQuestions
+ } from '@packages/database'
 import { eq, desc, and } from 'drizzle-orm'
+import { createDrizzleClient, type DrizzleDB } from '@packages/database'
 
 type Bindings = {
   HYPERDRIVE?: { connectionString: string }
@@ -28,22 +29,25 @@ app.use('*', async (c, next) => {
 })
 
 /**
+ * Helper to create Drizzle client from env
+ */
+function createDrizzleFromEnv(env: Bindings): DrizzleDB {
+  return createDrizzleClient(env)
+}
+
+/**
  * GET /categories
  * Returns all categories with their associated exams using standard SQL joins
  */
 app.get('/categories', async (c) => {
+  const db = createDrizzleFromEnv(c.env)
   try {
-    const db = createDrizzleClient(c.env)
+    // Fetch categories and exams separately to ensure 100% MySQL/MariaDB version compatibility
+    const allCategories = await db.select().from(categories).orderBy(desc(categories.createdAt))
 
-    const allCategories = await db
-      .select()
-      .from(categories)
-      .orderBy(desc(categories.createdAt))
+    const allExams = await db.select().from(exams)
 
-    const allExams = await db
-      .select()
-      .from(exams)
-
+    // Group exams into their respective categories in memory
     const data = allCategories.map((category) => ({
       ...category,
       exams: allExams.filter((exam) => exam.categoryId === category.id),
@@ -63,13 +67,9 @@ app.get('/categories', async (c) => {
  * GET /exams
  */
 app.get('/exams', async (c) => {
+  const db = createDrizzleFromEnv(c.env)
   try {
-    const db = createDrizzleClient(c.env)
-    const data = await db
-      .select()
-      .from(exams)
-      .orderBy(desc(exams.createdAt))
-
+    const data = await db.select().from(exams).orderBy(desc(exams.createdAt))
     return c.json({ success: true, data }, 200)
   } catch (error: any) {
     console.error('[Drizzle Error] GET /exams query failed:', error)
@@ -84,13 +84,9 @@ app.get('/exams', async (c) => {
  * GET /quizzes
  */
 app.get('/quizzes', async (c) => {
+  const db = createDrizzleFromEnv(c.env)
   try {
-    const db = createDrizzleClient(c.env)
-    const data = await db
-      .select()
-      .from(quizzes)
-      .orderBy(desc(quizzes.createdAt))
-
+    const data = await db.select().from(quizzes).orderBy(desc(quizzes.createdAt))
     return c.json({ success: true, data }, 200)
   } catch (error: any) {
     console.error('[Drizzle Error] GET /quizzes query failed:', error)
@@ -106,21 +102,20 @@ app.get('/quizzes', async (c) => {
  * Internal endpoint for attempt-service to fetch quiz metadata and answer keys
  */
 app.post('/internal/quiz-scoring-keys', async (c) => {
+  const db = createDrizzleFromEnv(c.env)
   try {
     const { quizId } = await c.req.json()
-    const db = createDrizzleClient(c.env)
 
-    const quiz = await db
-      .select()
-      .from(quizzes)
-      .where(eq(quizzes.id, quizId))
-      .limit(1)
-
-    if (!quiz.length) {
+    // Fetch quiz
+    const quizResult = await db.select().from(quizzes).where(eq(quizzes.id, quizId))
+    if (!quizResult.length) {
       return c.json({ success: false, error: 'Quiz not found' }, 404)
     }
+    const quiz = quizResult[0]
 
-    const quizQuestions = await db
+    // Fetch questions with their correct option id
+    // We need to join questions, options, and quiz_questions to get the correct option for each question in the quiz
+    const keys = await db
       .select({
         questionId: questions.id,
         marks: questions.marks,
@@ -128,14 +123,12 @@ app.post('/internal/quiz-scoring-keys', async (c) => {
       })
       .from(questions)
       .innerJoin(options, and(eq(options.questionId, questions.id), eq(options.isCorrect, true)))
-      .where(eq(questions.id, questions.id)) // This needs fixing - should join through a quiz_questions table
-      
-    // Since we don't have quiz_questions table in the schema, fetch all questions for this quiz's exams
-    // For now, return simplified structure
+      .innerJoin(quizQuestions, and(eq(quizQuestions.questionId, questions.id), eq(quizQuestions.quizId, quizId)))
+    
     return c.json({
       success: true,
-      quiz: quiz[0],
-      keys: quizQuestions,
+      quiz,
+      keys,
     })
   } catch (error: any) {
     console.error('[Drizzle Error] POST /internal/quiz-scoring-keys failed:', error)

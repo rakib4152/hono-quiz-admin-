@@ -13,7 +13,7 @@
 		{
 			"binding": "HYPERDRIVE",
 			"id": "e92a09fc692d4f4f8de9057e11d4a0aa",
-			"localConnectionString": "mysql://root:password@127.0.0.1:3306/u427015050_quiz"
+            "localConnectionString": "mysql://u427015050_drizzlequiz:R.r.4152@srv1562.hstgr.io:3306/u427015050_drizzle"
 		}
 	],
 	"kv_namespaces": [

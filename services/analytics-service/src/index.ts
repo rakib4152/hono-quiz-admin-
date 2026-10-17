@@ -60,8 +60,8 @@ analyticsDb.leaderboards.set('usr_student1_quiz_bcs_model_01', {
 });
 
 export const analyticsService = {
-  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string }) {
-    const { path, method, body, correlationId, userId = 'usr_student1' } = req;
+  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string; env?: any }) {
+    const { path, method, body, correlationId, userId = 'usr_student1', env } = req;
 
     // GET /leaderboards/quizzes/:quizId
     const matchQuizLb = path.match(/^\/leaderboards\/quizzes\/([^/]+)$/);
@@ -80,6 +80,7 @@ export const analyticsService = {
           score: lb.bestScore,
           percentage: lb.bestPercentage,
           completedAt: lb.completedAt,
+          updatedAt: lb.updatedAt,
         }));
 
       return { status: 200, data: { success: true, count: entries.length, leaderboard: entries, correlationId } };

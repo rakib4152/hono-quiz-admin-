@@ -34,6 +34,24 @@
       ],
       "@packages/database": [
         "./packages/database/src/index.ts"
+      ],
+      "@quiz-service": [
+        "./services/quiz-service/src/index.ts"
+      ],
+      "@attempt-service": [
+        "./services/attempt-service/src/index.ts"
+      ],
+      "@payment-service": [
+        "./services/payment-service/src/index.ts"
+      ],
+      "@analytics-service": [
+        "./services/analytics-service/src/index.ts"
+      ],
+      "@auth-service": [
+        "./services/auth-service/src/index.ts"
+      ],
+      "@shared-types": [
+        "./packages/shared-types/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,

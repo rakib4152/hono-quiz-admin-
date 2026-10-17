@@ -15,18 +15,17 @@ import { AppEnv } from './env.js';
 import { createHealthHandler } from './routes/health.js';
 import { handlePocCheck } from './routes/poc.js';
 
-import quizService from '../../services/quiz-service/src/index.js';
-import { attemptService } from '../../services/attempt-service/src/index.js';
-import { paymentService } from '../../services/payment-service/src/index.js';
-import { analyticsService } from '../../services/analytics-service/src/index.js';
-import { authService } from '../../services/auth-service/src/index.js';
+import quizApp, { quizService } from '@quiz-service';
+import { attemptService } from '@attempt-service';
+import { paymentService } from '@payment-service';
+import { analyticsService } from '@analytics-service';
+import { authService } from '@auth-service';
 
 import {
   createDrizzleClient,
   type DrizzleDB,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
-  getPrismaClient,
 } from '../../packages/database/src/index.js';
 
 export {
@@ -34,7 +33,6 @@ export {
   resolveDatabaseUrl,
   verifyDatabaseConnection,
   type DrizzleDB,
-  getPrismaClient,
 };
 
 const startupTime = Date.now();
@@ -67,7 +65,6 @@ app.use('/api/*', (c, next) => {
       'Authorization',
       'X-Requested-With',
       'X-Request-ID',
-      'X-Correlation-ID',
       'X-User-Role',
       'X-Idempotency-Key',
     ],
@@ -78,7 +75,8 @@ app.use('/api/*', (c, next) => {
 });
 
 // Mount microservices under /api/v1
-app.route('/api/v1', quizService);
+app.route('/api/v1', quizApp);
+// Temporarily disabled for debugging
 
 // Health & info endpoints (at root level, not under /api/v1)
 app.get('/health', (c) => {
@@ -89,7 +87,7 @@ app.get('/', (c) => {
   return c.json({
     service: 'Scalable Quiz Platform Production API',
     version: c.env?.API_VERSION || 'v1',
-    runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Drizzle/Prisma)',
+    runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Drizzle)',
     docs: '/api/v1/openapi.json',
     health: '/health',
     dbHealth: '/api/v1/db-health',
@@ -167,6 +165,7 @@ app.all('/api/v1/auth/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     token: c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '',
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -178,6 +177,7 @@ app.all('/api/v1/devices/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     token: c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '',
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -249,6 +249,7 @@ app.all('/api/v1/orders/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -260,6 +261,7 @@ app.all('/api/v1/payments/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -271,6 +273,7 @@ app.all('/api/v1/webhooks/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -282,6 +285,7 @@ app.all('/api/v1/quiz-access/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -293,6 +297,7 @@ app.all('/api/v1/leaderboards/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });
@@ -304,6 +309,7 @@ app.all('/api/v1/badges/*', async (c) => {
     body: await c.req.json().catch(() => ({})),
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     userId: '',
+    env: c.env,
   });
   return c.json(res.data, res.status);
 });

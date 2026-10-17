@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+# Ignore Cloudflare Wrangler local states
+.wrangler/
+apps/api/.wrangler

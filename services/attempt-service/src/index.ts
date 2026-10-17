@@ -4,10 +4,10 @@
  * Responsibilities: Timed attempts, server-authoritative scoring, negative marking, offline sync
  */
 
-import { AttemptStatus } from '../../../packages/shared-types/src/index.js';
-import { quizService } from '../../quiz-service/src/index.js';
-import { paymentService } from '../../payment-service/src/index.js';
-import { analyticsService } from '../../analytics-service/src/index.js';
+import { AttemptStatus } from '@shared-types';
+import { quizService } from '@quiz-service';
+import { paymentService } from '@payment-service';
+import { analyticsService } from '@analytics-service';
 
 interface QuizAttemptEntity {
   id: string;
@@ -79,6 +79,7 @@ export const attemptService = {
           method: 'POST',
           body: { userId, quizId },
           correlationId,
+          env,
         });
 
         if (!accessCheck.data.hasAccess) {
@@ -162,7 +163,7 @@ export const attemptService = {
       };
       attemptDb.answers.set(answerKey, answer);
 
-      return { status: 200, data: { success: true, saved: true, questionId, selectedOptionId, correlationId } };
+      return { status: 200, data: { success: true, saved: true, questionId: selectedOptionId, correlationId } };
     }
 
     // POST /attempts/:attemptId/submit (Server-Authoritative Scoring Engine)

@@ -3,10 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "prisma": {
-    "schema": "apps/prisma/schema.prisma",
-    "seed": "npx tsx apps/prisma/seed.ts"
-  },
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "dev:frontend": "vite --port=3002 --host=0.0.0.0",
@@ -16,10 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit",
-    "db:push": "prisma db push --schema=apps/prisma/schema.prisma",
-    "db:seed": "prisma db seed",
-    "db:generate": "prisma generate --schema=apps/prisma/schema.prisma"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -51,9 +44,6 @@
   "devDependencies": {
     "@prisma/client": "^5.22.0",
     "@types/express": "^4.17.21",
-    "@types/node": "^26.6.5",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.6",
     "drizzle-kit": "^0.31.11",

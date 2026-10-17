@@ -57,8 +57,8 @@ paymentDb.quizAccess.set('usr_student1_quiz_bcs_model_01', {
 });
 
 export const paymentService = {
-  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string }) {
-    const { path, method, body, correlationId, userId = 'usr_student1' } = req;
+  async handle(req: { path: string; method: string; body?: any; correlationId: string; userId?: string; env?: any }) {
+    const { path, method, body, correlationId, userId = 'usr_student1', env } = req;
 
     // POST /orders
     if (path === '/orders' && method === 'POST') {

@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from '../../packages/database/src/schema';
+import { randomUUID } from 'crypto';
 
 async function main() {
   const connection = await mysql.createConnection({
@@ -16,22 +17,30 @@ async function main() {
 
   console.log('Inserting sample categories, exams, and quizzes...');
 
+  // Generate IDs
+  const cat1Id = randomUUID();
+  const cat2Id = randomUUID();
+  const exam1Id = randomUUID();
+  const exam2Id = randomUUID();
+  const quiz1Id = randomUUID();
+  const quiz2Id = randomUUID();
+
   // 1. Insert Categories
   await db.insert(schema.categories).values([
-    { name: 'English Literature', slug: 'english-literature' },
-    { name: 'General Knowledge', slug: 'general-knowledge' },
+    { id: cat1Id, name: 'English Literature', slug: 'english-literature' },
+    { id: cat2Id, name: 'General Knowledge', slug: 'general-knowledge' },
   ]);
 
   // 2. Insert Exams
   await db.insert(schema.exams).values([
-    { title: 'Honours Final Exam', description: 'Final year examination prep' },
-    { title: 'Model Test 1', description: 'Practice test for beginners' },
+    { id: exam1Id, title: 'Honours Final Exam', description: 'Final year examination prep', categoryId: cat1Id },
+    { id: exam2Id, title: 'Model Test 1', description: 'Practice test for beginners', categoryId: cat2Id },
   ]);
 
   // 3. Insert Quizzes
   await db.insert(schema.quizzes).values([
-    { title: 'Shakespearean Drama Quiz', examId: 1, categoryId: 1, status: 'published' },
-    { title: 'World History Quiz', examId: 2, categoryId: 2, status: 'published' },
+    { id: quiz1Id, title: 'Shakespearean Drama Quiz', examId: exam1Id, categoryId: cat1Id, status: 'published' },
+    { id: quiz2Id, title: 'World History Quiz', examId: exam2Id, categoryId: cat2Id, status: 'published' },
   ]);
 
   console.log('Database seeded successfully with manual data!');

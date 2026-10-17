@@ -4,7 +4,7 @@
  * Responsibilities: Registration, Login, Session Management, RBAC, Device Binding
  */
 
-import { UserRole } from '../../../packages/shared-types/src/index.js';
+import { UserRole } from '@shared-types';
 
 interface UserEntity {
   id: string;
@@ -81,8 +81,8 @@ authDb.sessions.set('tok_student_123', {
 });
 
 export const authService = {
-  async handle(req: { path: string; method: string; body?: any; token?: string; correlationId: string }) {
-    const { path, method, body, token, correlationId } = req;
+  async handle(req: { path: string; method: string; body?: any; token?: string; correlationId: string; env?: any }) {
+    const { path, method, body, token, correlationId, env } = req;
 
     // Helper: resolve user from token
     const resolveUser = () => {
@@ -162,15 +162,15 @@ export const authService = {
         createdAt: new Date(),
       });
 
-      return {
-        status: 200,
-        data: {
-          success: true,
-          token: sessionToken,
-          user: { id: user.id, name: user.name, email: user.email, role: user.role },
-          correlationId,
-        },
-      };
+       return {
+         status: 200,
+         data: {
+           success: true,
+           token: sessionToken,
+           user: { id: user.id, name: user.name, email: user.email, role: user.role },
+           correlationId
+         }
+       };
     }
 
     // GET /api/v1/auth/me
@@ -181,10 +181,10 @@ export const authService = {
         status: 200,
         data: {
           success: true,
-          user: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive },
-          correlationId,
-        },
-      };
+           user: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive },
+           correlationId
+         }
+       };
     }
 
     // POST /api/v1/devices/register
