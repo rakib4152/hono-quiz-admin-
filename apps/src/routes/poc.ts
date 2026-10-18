@@ -7,16 +7,19 @@ import {
   resolveDatabaseUrl,
   createDrizzleClient,
   verifyDatabaseConnection,
+  endDrizzleConnection,
 } from '../../../packages/database/src/index.js';
 
 export async function handlePocCheck({
   env,
   req,
   json,
+  executionCtx,
 }: {
   env: AppEnv['Bindings'];
   req: Request;
   json: (data: any, status?: number) => Response;
+  executionCtx: { waitUntil: (p: Promise<any>) => void };
 }) {
   const connectionUrl = resolveDatabaseUrl(env as any);
 
@@ -31,8 +34,8 @@ export async function handlePocCheck({
     );
   }
 
+  const db = await createDrizzleClient(env);
   try {
-    const db = createDrizzleClient(env);
     const probe = await verifyDatabaseConnection(db);
 
     return json({
@@ -48,9 +51,11 @@ export async function handlePocCheck({
       {
         connected: false,
         database: 'u427015050_quiz',
-        error: err?.message || String(err),
+        error: err?.cause?.message || err?.message || String(err),
       },
       500
     );
+  } finally {
+    executionCtx.waitUntil(endDrizzleConnection(db));
   }
 }

@@ -26,6 +26,7 @@ import {
   type DrizzleDB,
   resolveDatabaseUrl,
   verifyDatabaseConnection,
+  endDrizzleConnection,
 } from '../../packages/database/src/index.js';
 
 export {
@@ -83,6 +84,29 @@ app.get('/health', (c) => {
   return c.json(createHealthHandler(c.env, startupTime));
 });
 
+// TEMPORARY DB diagnostic route
+app.get('/health/db', async (c) => {
+  const db = await createDrizzleClient(c.env as any);
+  try {
+    const result = await db.execute(`SELECT 1`);
+    return c.json({
+      connected: true,
+      result,
+    }, 200);
+  } catch (err: any) {
+    return c.json({
+      connected: false,
+      code: err?.cause?.code || err?.code,
+      errno: err?.cause?.errno || err?.errno,
+      sqlMessage: err?.cause?.sqlMessage || err?.sqlMessage,
+      message: err?.cause?.message || err?.message || String(err),
+      targetDatabase: 'u427015050_drizzle',
+    }, 500);
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db));
+  }
+});
+
 app.get('/', (c) => {
   return c.json({
     service: 'Scalable Quiz Platform Production API',
@@ -107,12 +131,12 @@ app.get('/', (c) => {
 
 // Database PoC & Connectivity Probes
 app.get('/poc/db-check', (c) => {
-  return handlePocCheck({ env: c.env, req: c.req.raw, json: c.json.bind(c) });
+  return handlePocCheck({ env: c.env, req: c.req.raw, json: c.json.bind(c), executionCtx: c.executionCtx });
 });
 
 app.get('/api/v1/db-health', async (c) => {
+  const db = await createDrizzleClient(c.env as any);
   try {
-    const db = createDrizzleClient(c.env as any);
     const probe = await verifyDatabaseConnection(db);
     return c.json({
       connected: probe.ok,
@@ -126,6 +150,8 @@ app.get('/api/v1/db-health', async (c) => {
       error: 'Drizzle client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
       targetDatabase: 'u427015050_quiz',
     }, 500);
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db));
   }
 });
 

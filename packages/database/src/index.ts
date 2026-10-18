@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/mysql2'
-import mysql from 'mysql2'
+import { createConnection } from 'mysql2/promise'
 import { sql } from 'drizzle-orm'
 import * as schema from './schema'
 
@@ -7,47 +7,37 @@ export * from './schema'
 export { schema }
 
 /**
- * Creates a Drizzle DB instance using Hyperdrive env or DATABASE_URL
- * Optimized for Cloudflare Workers environment
+ * Creates a Drizzle DB instance using Hyperdrive env or DATABASE_URL.
+ * Creates a new connection per call (per request) with disableEval: true
+ * to avoid the Workers V8 isolate blocking eval() used by mysql2 internally.
+ * The connection is attached to the returned db as __connection for cleanup.
  */
-export function createDrizzleClient(env: any) {
-  let connectionString = ''
-  
-  if (env?.HYPERDRIVE) {
-    connectionString = env.HYPERDRIVE.connectionString || resolveDatabaseUrl(env)
-  } else {
-    connectionString = env?.DATABASE_URL || process.env.DATABASE_URL || ''
+export async function createDrizzleClient(env: any) {
+  let config: any = {
+    disableEval: true,
+    multipleStatements: true,
   }
 
-  // Parse the connection string to create a connection pool
-  // Avoid SSL options that aren't supported in Cloudflare Workers
-  try {
-    const url = new URL(connectionString);
-    const connection = mysql.createPool({
-      host: url.hostname,
-      port: Number(url.port) || 3306,
-      user: url.username,
-      password: url.password,
-      database: url.pathname.slice(1), // remove leading '/'
-      // Critical: Disable SSL options that cause issues in Miniflare/wrangler
-      ssl: false,
-      multipleStatements: true,
-      // Additional Cloudflare Worker optimizations
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    })
-    return drizzle(connection, { schema, mode: 'default' })
-  } catch (error) {
-    // Fallback to URI-based connection if parsing fails
-    console.warn('Failed to parse connection string, falling back to URI mode:', error)
-    const pool = mysql.createPool({
-      uri: connectionString,
-      ssl: false,
-      multipleStatements: true,
-    })
-    return drizzle(pool, { schema, mode: 'default' })
+  if (env?.HYPERDRIVE) {
+    config.host = env.HYPERDRIVE.host
+    config.port = env.HYPERDRIVE.port || 3306
+    config.user = env.HYPERDRIVE.user
+    config.password = env.HYPERDRIVE.password
+    config.database = env.HYPERDRIVE.database
+  } else {
+    const connectionString = env?.DATABASE_URL || env?.QUIZ_DATABASE_URL || process.env.DATABASE_URL || ''
+    const url = new URL(connectionString)
+    config.host = url.hostname
+    config.port = Number(url.port) || 3306
+    config.user = url.username
+    config.password = url.password
+    config.database = url.pathname.slice(1)
   }
+
+  const connection = await createConnection(config)
+  const db = drizzle(connection, { schema, mode: 'default' })
+  ;(db as any).__connection = connection
+  return db
 }
 
 export type DrizzleDB = ReturnType<typeof createDrizzleClient>
@@ -60,11 +50,10 @@ export function resolveDatabaseUrl(env: any): string {
     if (env.HYPERDRIVE.connectionString) {
       return env.HYPERDRIVE.connectionString
     }
-    // Construct from individual Hyperdrive properties
     const { user, password, host, port, database } = env.HYPERDRIVE
     return `mysql://${user}:${password}@${host}:${port || 3306}/${database}`
   }
-  return env?.DATABASE_URL || process.env.DATABASE_URL || ''
+  return env?.DATABASE_URL || env?.QUIZ_DATABASE_URL || process.env.DATABASE_URL || ''
 }
 
 /**
@@ -80,8 +69,21 @@ export async function verifyDatabaseConnection(db: DrizzleDB): Promise<boolean> 
   }
 }
 
+/**
+ * Safely end a connection created by createDrizzleClient.
+ * Call via c.executionCtx.waitUntil(endDrizzleConnection(db)) in route handlers.
+ */
+export function endDrizzleConnection(db: DrizzleDB): Promise<void> {
+  const conn = (db as any).__connection
+  if (conn && typeof conn.end === 'function') {
+    return conn.end()
+  }
+  return Promise.resolve()
+}
+
 export interface DatabaseEnv {
   DATABASE_URL?: string
-  HYPERDRIVE?: { connectionString: string }
+  QUIZ_DATABASE_URL?: string
+  HYPERDRIVE?: { connectionString: string; host?: string; port?: number; database?: string; user?: string }
   [key: string]: any
 }

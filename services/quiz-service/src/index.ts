@@ -9,7 +9,7 @@ import {
    quizQuestions
  } from '@packages/database'
 import { eq, desc, and } from 'drizzle-orm'
-import { createDrizzleClient, type DrizzleDB } from '@packages/database'
+import { createDrizzleClient, type DrizzleDB, endDrizzleConnection } from '@packages/database'
 
 type Bindings = {
   HYPERDRIVE?: { connectionString: string }
@@ -31,7 +31,7 @@ app.use('*', async (c, next) => {
 /**
  * Helper to create Drizzle client from env
  */
-function createDrizzleFromEnv(env: Bindings): DrizzleDB {
+async function createDrizzleFromEnv(env: Bindings): Promise<DrizzleDB> {
   return createDrizzleClient(env)
 }
 
@@ -40,26 +40,28 @@ function createDrizzleFromEnv(env: Bindings): DrizzleDB {
  * Returns all categories with their associated exams using standard SQL joins
  */
 app.get('/categories', async (c) => {
-  const db = createDrizzleFromEnv(c.env)
+  const db = await createDrizzleFromEnv(c.env)
   try {
-    // Fetch categories and exams separately to ensure 100% MySQL/MariaDB version compatibility
     const allCategories = await db.select().from(categories).orderBy(desc(categories.createdAt))
-
     const allExams = await db.select().from(exams)
-
-    // Group exams into their respective categories in memory
     const data = allCategories.map((category) => ({
       ...category,
       exams: allExams.filter((exam) => exam.categoryId === category.id),
     }))
-
     return c.json({ success: true, data }, 200)
   } catch (error: any) {
     console.error('[Drizzle Error] GET /categories query failed:', error)
+    console.error('[Drizzle Error] GET /categories cause:', error?.cause)
+    console.error('[Drizzle Error] GET /categories cause.code:', error?.cause?.code)
+    console.error('[Drizzle Error] GET /categories cause.errno:', error?.cause?.errno)
+    console.error('[Drizzle Error] GET /categories cause.sqlMessage:', error?.cause?.sqlMessage)
+    console.error('[Drizzle Error] GET /categories cause.message:', error?.cause?.message)
     return c.json({ 
       success: false, 
       error: error.message || 'Failed to fetch categories' 
     }, 500)
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db))
   }
 })
 
@@ -67,16 +69,23 @@ app.get('/categories', async (c) => {
  * GET /exams
  */
 app.get('/exams', async (c) => {
-  const db = createDrizzleFromEnv(c.env)
+  const db = await createDrizzleFromEnv(c.env)
   try {
     const data = await db.select().from(exams).orderBy(desc(exams.createdAt))
     return c.json({ success: true, data }, 200)
   } catch (error: any) {
     console.error('[Drizzle Error] GET /exams query failed:', error)
+    console.error('[Drizzle Error] GET /exams cause:', error?.cause)
+    console.error('[Drizzle Error] GET /exams cause.code:', error?.cause?.code)
+    console.error('[Drizzle Error] GET /exams cause.errno:', error?.cause?.errno)
+    console.error('[Drizzle Error] GET /exams cause.sqlMessage:', error?.cause?.sqlMessage)
+    console.error('[Drizzle Error] GET /exams cause.message:', error?.cause?.message)
     return c.json({ 
       success: false, 
       error: error.message || 'Failed to fetch exams' 
     }, 500)
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db))
   }
 })
 
@@ -84,16 +93,23 @@ app.get('/exams', async (c) => {
  * GET /quizzes
  */
 app.get('/quizzes', async (c) => {
-  const db = createDrizzleFromEnv(c.env)
+  const db = await createDrizzleFromEnv(c.env)
   try {
     const data = await db.select().from(quizzes).orderBy(desc(quizzes.createdAt))
     return c.json({ success: true, data }, 200)
   } catch (error: any) {
     console.error('[Drizzle Error] GET /quizzes query failed:', error)
+    console.error('[Drizzle Error] GET /quizzes cause:', error?.cause)
+    console.error('[Drizzle Error] GET /quizzes cause.code:', error?.cause?.code)
+    console.error('[Drizzle Error] GET /quizzes cause.errno:', error?.cause?.errno)
+    console.error('[Drizzle Error] GET /quizzes cause.sqlMessage:', error?.cause?.sqlMessage)
+    console.error('[Drizzle Error] GET /quizzes cause.message:', error?.cause?.message)
     return c.json({ 
       success: false, 
       error: error.message || 'Failed to fetch quizzes' 
     }, 500)
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db))
   }
 })
 
@@ -102,19 +118,16 @@ app.get('/quizzes', async (c) => {
  * Internal endpoint for attempt-service to fetch quiz metadata and answer keys
  */
 app.post('/internal/quiz-scoring-keys', async (c) => {
-  const db = createDrizzleFromEnv(c.env)
+  const db = await createDrizzleFromEnv(c.env)
   try {
     const { quizId } = await c.req.json()
 
-    // Fetch quiz
     const quizResult = await db.select().from(quizzes).where(eq(quizzes.id, quizId))
     if (!quizResult.length) {
       return c.json({ success: false, error: 'Quiz not found' }, 404)
     }
     const quiz = quizResult[0]
 
-    // Fetch questions with their correct option id
-    // We need to join questions, options, and quiz_questions to get the correct option for each question in the quiz
     const keys = await db
       .select({
         questionId: questions.id,
@@ -132,10 +145,17 @@ app.post('/internal/quiz-scoring-keys', async (c) => {
     })
   } catch (error: any) {
     console.error('[Drizzle Error] POST /internal/quiz-scoring-keys failed:', error)
+    console.error('[Drizzle Error] POST /internal/quiz-scoring-keys cause:', error?.cause)
+    console.error('[Drizzle Error] POST /internal/quiz-scoring-keys cause.code:', error?.cause?.code)
+    console.error('[Drizzle Error] POST /internal/quiz-scoring-keys cause.errno:', error?.cause?.errno)
+    console.error('[Drizzle Error] POST /internal/quiz-scoring-keys cause.sqlMessage:', error?.cause?.sqlMessage)
+    console.error('[Drizzle Error] POST /internal/quiz-scoring-keys cause.message:', error?.cause?.message)
     return c.json({ 
       success: false, 
       error: error.message || 'Failed to fetch quiz keys' 
     }, 500)
+  } finally {
+    c.executionCtx.waitUntil(endDrizzleConnection(db))
   }
 })
 
