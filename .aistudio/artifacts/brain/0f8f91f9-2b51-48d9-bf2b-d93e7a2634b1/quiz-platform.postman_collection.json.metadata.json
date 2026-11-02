@@ -1,0 +1,5 @@
+{
+  "summary":  "Complete Postman Collection v2.1 for the Quiz Platform API.\nIncludes 13 folders and over 35 endpoints covering Categories, Exams, Subjects, Topics, Quizzes, Questions & Options, Candidate Attempts, Offline Synchronization, Bookmarks & Saved Quizzes, Authentication & Devices, Payments & Access, Analytics & Leaderboards, and Hostinger MySQL Diagnostics. Pre-configured with variables for baseUrl, authToken, categoryId, examId, quizId, questionId, and attemptId.",
+  "updatedAt":  "2026-11-02T13:25:02.672596187Z",
+  "userFacing":  true
+}
