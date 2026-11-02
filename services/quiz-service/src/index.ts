@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import {
   categories,
   exams,
@@ -13,7 +12,7 @@ import {
   type DrizzleDB,
   endDrizzleConnection,
 } from '../../../packages/database/src/index.js';
-import { eq, desc, asc, and, inArray } from 'drizzle-orm';
+import { eq, desc, asc, and, inArray, sql } from 'drizzle-orm';
 
 type Bindings = {
   HYPERDRIVE?: { connectionString: string };
@@ -23,20 +22,22 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.use('*', async (c, next) => {
-  const corsMiddleware = cors({
-    origin: c.env.CORS_ALLOWED_ORIGINS ? c.env.CORS_ALLOWED_ORIGINS.split(',') : '*',
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-Role'],
-  });
-  return corsMiddleware(c, next);
-});
-
 /**
  * Helper to create Drizzle client from env
  */
 async function createDrizzleFromEnv(env: Bindings): Promise<DrizzleDB> {
   return createDrizzleClient(env);
+}
+
+/**
+ * Requires ADMIN or SUPER_ADMIN role for mutating endpoints
+ */
+function requireAdmin(c: any): { allowed: boolean; userRole?: string } | Response {
+  const userRole = c.req.header('X-User-Role') || '';
+  if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+    return c.json({ success: false, error: 'Admin access required' }, 403);
+  }
+  return { allowed: true, userRole };
 }
 
 function generateId(prefix: string): string {
@@ -129,6 +130,8 @@ app.get('/categories/:id', async (c) => {
  * Create a new category in Hostinger MySQL
  */
 app.post('/categories', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -162,6 +165,8 @@ app.post('/categories', async (c) => {
  * Update an existing category
  */
 app.put('/categories/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const categoryId = c.req.param('id');
   try {
@@ -187,6 +192,8 @@ app.put('/categories/:id', async (c) => {
  * Delete a category by ID
  */
 app.delete('/categories/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const categoryId = c.req.param('id');
   try {
@@ -253,6 +260,8 @@ app.get('/exams/:id', async (c) => {
  * Create a new exam
  */
 app.post('/exams', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -287,6 +296,8 @@ app.post('/exams', async (c) => {
  * Delete an exam
  */
 app.delete('/exams/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const examId = c.req.param('id');
   try {
@@ -324,6 +335,8 @@ app.get('/subjects', async (c) => {
  * Create a new subject
  */
 app.post('/subjects', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -371,6 +384,8 @@ app.get('/topics', async (c) => {
  * Create a new topic under a subject
  */
 app.post('/topics', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -498,6 +513,8 @@ app.get('/quizzes/:id', async (c) => {
  * Create a new quiz
  */
 app.post('/quizzes', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -553,6 +570,8 @@ app.post('/quizzes', async (c) => {
  * Update quiz metadata or publish status
  */
 app.put('/quizzes/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
   try {
@@ -584,6 +603,8 @@ app.put('/quizzes/:id', async (c) => {
  * Delete quiz and question links
  */
 app.delete('/quizzes/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
   try {
@@ -602,6 +623,8 @@ app.delete('/quizzes/:id', async (c) => {
  * Link questions to a quiz
  */
 app.post('/quizzes/:id/questions', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
   try {
@@ -711,6 +734,8 @@ app.get('/questions', async (c) => {
  * Create atomic question and options
  */
 app.post('/questions', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -730,42 +755,46 @@ app.post('/questions', async (c) => {
 
     const newQuestionId = body.id || generateId('q');
 
-    await db.insert(questions).values({
-      id: newQuestionId,
-      subjectId,
-      topicId: topicId || null,
-      body: questionBody,
-      explanation: explanation || null,
-      difficulty: Number(difficulty) || 1,
-      marks: Number(marks) || 1.0,
-    });
+    // Transaction: insert question and options atomically
+    const result = await db.transaction(async (tx) => {
+      await tx.insert(questions).values({
+        id: newQuestionId,
+        subjectId,
+        topicId: topicId || null,
+        body: questionBody,
+        explanation: explanation || null,
+        difficulty: Number(difficulty) || 1,
+        marks: Number(marks) || 1.0,
+      });
 
-    const insertedOptions: any[] = [];
-    if (Array.isArray(rawOptions) && rawOptions.length > 0) {
-      for (let i = 0; i < rawOptions.length; i++) {
-        const opt = rawOptions[i];
-        const optId = opt.id || generateId('opt');
-        const optValues = {
-          id: optId,
-          questionId: newQuestionId,
-          text: opt.text || '',
-          isCorrect: !!opt.isCorrect,
-          position: opt.position || i + 1,
-          imageUrl: opt.imageUrl || null,
-        };
-        await db.insert(options).values(optValues);
-        insertedOptions.push(optValues);
+      const insertedOptions: any[] = [];
+      if (Array.isArray(rawOptions) && rawOptions.length > 0) {
+        for (let i = 0; i < rawOptions.length; i++) {
+          const opt = rawOptions[i];
+          const optId = opt.id || generateId('opt');
+          const optValues = {
+            id: optId,
+            questionId: newQuestionId,
+            text: opt.text || '',
+            isCorrect: !!opt.isCorrect,
+            position: opt.position || i + 1,
+            imageUrl: opt.imageUrl || null,
+          };
+          await tx.insert(options).values(optValues);
+          insertedOptions.push(optValues);
+        }
       }
-    }
 
-    const [created] = await db.select().from(questions).where(eq(questions.id, newQuestionId)).limit(1);
+      const [created] = await tx.select().from(questions).where(eq(questions.id, newQuestionId)).limit(1);
+      return { created, insertedOptions };
+    });
 
     return c.json({
       success: true,
       persistedToDatabase: true,
       data: {
-        ...created,
-        options: insertedOptions,
+        ...result.created,
+        options: result.insertedOptions,
       },
     }, 201);
   } catch (error: any) {
@@ -781,6 +810,8 @@ app.post('/questions', async (c) => {
  * Delete a question and its options
  */
 app.delete('/questions/:id', async (c) => {
+  const admin = requireAdmin(c);
+  if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const questionId = c.req.param('id');
   try {

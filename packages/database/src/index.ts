@@ -16,7 +16,6 @@ export async function createDrizzleClient(env: any): Promise<MySql2Database<type
   let config: any = {
     disableEval: true,
     multipleStatements: true,
-    ssl: { rejectUnauthorized: false },
   };
 
   if (env?.HYPERDRIVE) {
