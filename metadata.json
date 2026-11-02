@@ -1,6 +1,6 @@
 {
   "name": "QuizPlatform Cloudflare Hono Prisma Architect",
-  "description": "Production architecture, compatibility report, remote Hostinger MySQL Hyperdrive PoC, and monorepo for Cloudflare Workers, Hono, Prisma, Next.js, and Expo.",
+  "description": "Production architecture, remote Hostinger MySQL Hyperdrive, and monorepo for Cloudflare Workers, Hono, Drizzle ORM, Next.js, and Expo.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

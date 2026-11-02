@@ -299,7 +299,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             Hono API Backend Connection Settings
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-400">
-            Configure the live API base endpoint running on Cloudflare Workers / Wrangler and connected to Hostinger MySQL via Prisma.
+            Configure the live API base endpoint running on Cloudflare Workers / Wrangler and connected to Hostinger MySQL via Drizzle ORM.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,52 +1,42 @@
-# Production Deployment & CI/CD Guide
+# Production Deployment & CI/CD Guide (Drizzle ORM)
 
 ## 1. Hostinger Business Shared MySQL Setup
 
 ### Databases to Create in hPanel:
-1. `u123456_auth_db`
-2. `u123456_quiz_db`
-3. `u123456_attempt_db`
-4. `u123456_payment_db`
-5. `u123456_analytics_db`
+- `u427015050_drizzle` (Hostinger MySQL 8.0 InnoDB)
 
 ### Enable Remote MySQL:
-In **hPanel -> Databases -> Remote MySQL**, add `%` (or Cloudflare Hyperdrive IP CIDRs) for each database.
+In **hPanel -> Databases -> Remote MySQL**, add `%` (or Cloudflare Hyperdrive IP CIDRs).
 
-### Prisma Migration Execution:
-Run independent migrations from deployment environment:
+### Drizzle ORM Schema Synchronization:
+Run schema migrations from your development or CI/CD environment:
 ```bash
-npx prisma migrate deploy --schema=./prisma/auth/schema.prisma
-npx prisma migrate deploy --schema=./prisma/quiz/schema.prisma
-npx prisma migrate deploy --schema=./prisma/attempt/schema.prisma
-npx prisma migrate deploy --schema=./prisma/payment/schema.prisma
-npx prisma migrate deploy --schema=./prisma/analytics/schema.prisma
+# 1. Generate SQL migration files
+npx drizzle-kit generate
+
+# 2. Push schema changes directly to remote Hostinger MySQL
+npx drizzle-kit push
+
+# 3. Seed initial database records
+npx tsx src/db/seed.ts
 ```
 
 ---
 
 ## 2. Cloudflare Hyperdrive Setup
 ```bash
-npx wrangler hyperdrive create auth-hyperdrive --connection-string="mysql://user:pass@host:3306/u123456_auth_db"
-npx wrangler hyperdrive create quiz-hyperdrive --connection-string="mysql://user:pass@host:3306/u123456_quiz_db"
-npx wrangler hyperdrive create attempt-hyperdrive --connection-string="mysql://user:pass@host:3306/u123456_attempt_db"
-npx wrangler hyperdrive create payment-hyperdrive --connection-string="mysql://user:pass@host:3306/u123456_payment_db"
-npx wrangler hyperdrive create analytics-hyperdrive --connection-string="mysql://user:pass@host:3306/u123456_analytics_db"
+npx wrangler hyperdrive create quiz-hyperdrive --connection-string="mysql://u427015050_drizzlequiz:R.r.4152@srv1562.hstgr.io:3306/u427015050_drizzle"
 ```
 
 ---
 
 ## 3. Worker Services Deployment
 ```bash
-cd services/api-gateway && npx wrangler deploy
-cd services/auth-service && npx wrangler deploy
-cd services/quiz-service && npx wrangler deploy
-cd services/attempt-service && npx wrangler deploy
-cd services/payment-service && npx wrangler deploy
-cd services/analytics-service && npx wrangler deploy
+npx wrangler deploy --config apps/wrangler.jsonc
 ```
 
 ---
 
-## 4. Next.js Admin & Expo Mobile Integration
-- **Next.js Admin**: Configured with `output: 'export'` for Hostinger shared hosting or `output: 'standalone'` for Hostinger VPS, connecting to `https://api.example.com/api/v1`.
-- **Expo Mobile Client**: Communicates with `https://api.example.com/api/v1` and caches offline attempts in SQLite, pushing batches to `POST /api/v1/sync/push`.
+## 4. Frontend & Mobile Integration
+- **Admin Dashboard**: Connects to `/api/v1` (Cloudflare Workers API Gateway).
+- **Mobile Client**: Communicates with `/api/v1` and caches offline attempts in SQLite, syncing batches via `POST /api/v1/sync/attempts`.

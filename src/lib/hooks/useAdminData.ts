@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   apiFetch,
-  mapPrismaCategory,
-  mapPrismaExam,
-  mapPrismaQuiz,
+  mapDrizzleCategory,
+  mapDrizzleExam,
+  mapDrizzleQuiz,
   CategoryDTO,
   ExamDTO,
   QuizDTO,
@@ -26,7 +26,7 @@ export interface UseAdminDataResult {
 
 /**
  * Custom React Hook to fetch and synchronize live data from Hono Cloudflare API
- * Connected to Hostinger MySQL via Prisma
+ * Connected to Hostinger MySQL via Drizzle ORM
  */
 export function useAdminData(initialData?: {
   categories?: CategoryDTO[];
@@ -39,15 +39,12 @@ export function useAdminData(initialData?: {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
-
-  const apiUrl = getApiBaseUrl();
+  const [apiUrl] = useState<string>(getApiBaseUrl());
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      // Parallel fetch from Hono API endpoints
       const [catRes, examRes, quizRes] = await Promise.all([
         apiFetch('/categories'),
         apiFetch('/exams'),
@@ -59,19 +56,19 @@ export function useAdminData(initialData?: {
 
       // 1. Process & map Categories
       if (catRes.ok && Array.isArray(catRes.data)) {
-        const mapped = catRes.data.map(mapPrismaCategory);
+        const mapped = catRes.data.map(mapDrizzleCategory);
         if (mapped.length > 0) setCategories(mapped);
       }
 
       // 2. Process & map Exams
       if (examRes.ok && Array.isArray(examRes.data)) {
-        const mapped = examRes.data.map(mapPrismaExam);
+        const mapped = examRes.data.map(mapDrizzleExam);
         if (mapped.length > 0) setExams(mapped);
       }
 
       // 3. Process & map Quizzes
       if (quizRes.ok && Array.isArray(quizRes.data)) {
-        const mapped = quizRes.data.map(mapPrismaQuiz);
+        const mapped = quizRes.data.map(mapDrizzleQuiz);
         if (mapped.length > 0) setQuizzes(mapped);
       }
 
@@ -106,7 +103,7 @@ export function useAdminData(initialData?: {
       });
 
       if (res.ok) {
-        const newCat = mapPrismaCategory(res.data);
+        const newCat = mapDrizzleCategory(res.data);
         setCategories((prev: CategoryDTO[]) => [newCat, ...prev]);
         return newCat;
       }
@@ -132,7 +129,7 @@ export function useAdminData(initialData?: {
       });
 
       if (res.ok) {
-        const newExam = mapPrismaExam(res.data);
+        const newExam = mapDrizzleExam(res.data);
         setExams((prev: ExamDTO[]) => [newExam, ...prev]);
         return newExam;
       }
@@ -162,7 +159,7 @@ export function useAdminData(initialData?: {
       });
 
       if (res.ok) {
-        const newQuiz = mapPrismaQuiz(res.data);
+        const newQuiz = mapDrizzleQuiz(res.data);
         setQuizzes((prev: QuizDTO[]) => [newQuiz, ...prev]);
         return newQuiz;
       }

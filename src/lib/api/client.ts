@@ -772,9 +772,9 @@ export function setApiBaseUrl(url: string): void {
 }
 
 /**
- * Normalizes and maps raw Prisma Category record to CategoryDTO
+ * Normalizes and maps raw Drizzle / MySQL Category record to CategoryDTO
  */
-export function mapPrismaCategory(cat: any): CategoryDTO {
+export function mapDrizzleCategory(cat: any): CategoryDTO {
   return {
     id: cat.id || `cat-${Date.now()}`,
     nameEn: cat.nameEn || cat.name || 'Untitled Category',
@@ -786,11 +786,12 @@ export function mapPrismaCategory(cat: any): CategoryDTO {
     createdAt: cat.createdAt ? new Date(cat.createdAt).toISOString() : new Date().toISOString(),
   };
 }
+export const mapPrismaCategory = mapDrizzleCategory;
 
 /**
- * Normalizes and maps raw Prisma Exam record to ExamDTO
+ * Normalizes and maps raw Drizzle / MySQL Exam record to ExamDTO
  */
-export function mapPrismaExam(exam: any): ExamDTO {
+export function mapDrizzleExam(exam: any): ExamDTO {
   return {
     id: exam.id || `exam-${Date.now()}`,
     categoryId: exam.categoryId || '',
@@ -807,11 +808,12 @@ export function mapPrismaExam(exam: any): ExamDTO {
     createdAt: exam.createdAt ? new Date(exam.createdAt).toISOString() : new Date().toISOString(),
   };
 }
+export const mapPrismaExam = mapDrizzleExam;
 
 /**
- * Normalizes and maps raw Prisma Quiz record to QuizDTO
+ * Normalizes and maps raw Drizzle / MySQL Quiz record to QuizDTO
  */
-export function mapPrismaQuiz(quiz: any): QuizDTO {
+export function mapDrizzleQuiz(quiz: any): QuizDTO {
   const durationMin =
     quiz.durationMinutes ??
     (quiz.durationSeconds ? Math.round(quiz.durationSeconds / 60) : 60);
@@ -844,11 +846,12 @@ export function mapPrismaQuiz(quiz: any): QuizDTO {
     publishedAt: quiz.publishedAt ? new Date(quiz.publishedAt).toISOString() : undefined,
   };
 }
+export const mapPrismaQuiz = mapDrizzleQuiz;
 
 /**
- * Normalizes and maps raw Prisma Subject record to SubjectDTO
+ * Normalizes and maps raw Drizzle / MySQL Subject record to SubjectDTO
  */
-export function mapPrismaSubject(sub: any): SubjectDTO {
+export function mapDrizzleSubject(sub: any): SubjectDTO {
   return {
     id: sub.id || `sub-${Date.now()}`,
     examId: sub.examId || 'exam-1',
@@ -863,11 +866,12 @@ export function mapPrismaSubject(sub: any): SubjectDTO {
     createdAt: sub.createdAt ? new Date(sub.createdAt).toISOString() : new Date().toISOString(),
   };
 }
+export const mapPrismaSubject = mapDrizzleSubject;
 
 /**
- * Normalizes and maps raw Prisma Topic record to TopicDTO
+ * Normalizes and maps raw Drizzle / MySQL Topic record to TopicDTO
  */
-export function mapPrismaTopic(top: any): TopicDTO {
+export function mapDrizzleTopic(top: any): TopicDTO {
   return {
     id: top.id || `top-${Date.now()}`,
     subjectId: top.subjectId || '',
@@ -882,11 +886,12 @@ export function mapPrismaTopic(top: any): TopicDTO {
     createdAt: top.createdAt ? new Date(top.createdAt).toISOString() : new Date().toISOString(),
   };
 }
+export const mapPrismaTopic = mapDrizzleTopic;
 
 /**
- * Normalizes and maps raw Prisma Chapter record to ChapterDTO
+ * Normalizes and maps raw Drizzle / MySQL Chapter record to ChapterDTO
  */
-export function mapPrismaChapter(ch: any): ChapterDTO {
+export function mapDrizzleChapter(ch: any): ChapterDTO {
   return {
     id: ch.id || `ch-${Date.now()}`,
     topicId: ch.topicId || '',
@@ -901,6 +906,7 @@ export function mapPrismaChapter(ch: any): ChapterDTO {
     createdAt: ch.createdAt ? new Date(ch.createdAt).toISOString() : new Date().toISOString(),
   };
 }
+export const mapPrismaChapter = mapDrizzleChapter;
 
 export interface LiveApiResponse<T> {
   ok: boolean;

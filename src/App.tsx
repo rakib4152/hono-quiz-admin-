@@ -37,9 +37,9 @@ import {
   initialChapters,
   executeWorkerApi,
   apiFetch,
-  mapPrismaCategory,
-  mapPrismaExam,
-  mapPrismaQuiz,
+  mapDrizzleCategory,
+  mapDrizzleExam,
+  mapDrizzleQuiz,
   getApiBaseUrl,
   setApiBaseUrl,
 } from './lib/api/client.js';
@@ -100,13 +100,13 @@ export default function App() {
       setIsLiveConnected(live);
 
       if (catRes.ok && Array.isArray(catRes.data) && catRes.data.length > 0) {
-        setCategories(catRes.data.map(mapPrismaCategory));
+        setCategories(catRes.data.map(mapDrizzleCategory));
       }
       if (examRes.ok && Array.isArray(examRes.data) && examRes.data.length > 0) {
-        setExams(examRes.data.map(mapPrismaExam));
+        setExams(examRes.data.map(mapDrizzleExam));
       }
       if (quizRes.ok && Array.isArray(quizRes.data) && quizRes.data.length > 0) {
-        setQuizzes(quizRes.data.map(mapPrismaQuiz));
+        setQuizzes(quizRes.data.map(mapDrizzleQuiz));
       }
 
       if (live) {
@@ -346,7 +346,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <span className="font-bold text-orange-400">QuizPlatform Backend & Admin:</span>
           <span className="text-slate-400 hidden sm:inline">
-            Prisma MySQL Schema (21 Models) • Cloudflare Workers Hono API • Next.js App Router
+            Drizzle MySQL Schema (Hostinger MySQL) • Cloudflare Workers Hono API
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -358,7 +358,7 @@ export default function App() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Next.js Admin Dashboard
+            Admin Dashboard
           </button>
           <button
             onClick={() => {
@@ -371,7 +371,7 @@ export default function App() {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Play className="h-3 w-3" /> Live API Runner & Prisma Schema
+            <Play className="h-3 w-3" /> Live API Runner & Drizzle Schema
           </button>
         </div>
       </div>
@@ -516,10 +516,10 @@ export default function App() {
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Server className="h-5 w-5 text-orange-400" />
-                  Prisma Models & Cloudflare Workers Live API Endpoint Runner
+                  Drizzle Models & Cloudflare Workers Live API Endpoint Runner
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Full implementation of the 21 models: User, Session, Device, Category, Exam, Subject, Topic, Quiz, Question, Option, QuizQuestion, QuizAttempt, AttemptAnswer, Order, Payment, QuizAccess, Bookmark, SavedQuiz, Badge, UserBadge, LeaderboardEntry, OfflineSync.
+                  Full implementation of the Drizzle MySQL tables: users, categories, exams, subjects, topics, quizzes, questions, options, quizQuestions, attempts, attemptAnswers, orders, payments, quizAccess, bookmarks.
                 </p>
               </div>
               <button
@@ -674,14 +674,14 @@ export default function App() {
                 {/* Schema Summary Card */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                   <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <Database className="h-4 w-4 text-orange-400" /> Hostinger MySQL Prisma Model Relationships:
+                    <Database className="h-4 w-4 text-orange-400" /> Hostinger MySQL Drizzle Table Relationships:
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    <code>Category</code> → <code>Exam</code> → <code>Quiz</code> → <code>QuizQuestion</code> → <code>Question</code> → <code>Option</code>.
+                    <code>categories</code> → <code>exams</code> → <code>quizzes</code> → <code>quizQuestions</code> → <code>questions</code> → <code>options</code>.
                     <br />
-                    <code>QuizAttempt</code> holds <code>AttemptAnswer</code> records linked to <code>SelectedOption</code>. Upon submission, the engine computes penalties (<code>negativeMark</code>) and updates <code>LeaderboardEntry</code> and <code>UserBadge</code>.
+                    <code>attempts</code> holds <code>attemptAnswers</code> records linked to <code>selectedOptionId</code>. Upon submission, the engine computes penalties (<code>negativeMark</code>) and updates scores.
                     <br />
-                    <code>Order</code> → <code>Payment</code> → <code>QuizAccess</code> grants time-bounded entrance to paid exams.
+                    <code>orders</code> → <code>payments</code> → <code>quizAccess</code> grants time-bounded entrance to paid exams.
                   </p>
                 </div>
               </div>

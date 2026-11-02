@@ -20,12 +20,6 @@
       "@/*": [
         "./*"
       ],
-      "@prisma/client": [
-        "./node_modules/@prisma/client"
-      ],
-      "@prisma/client/edge": [
-        "./node_modules/@prisma/client/edge"
-      ],
       "@quiz/database": [
         "./packages/database/src/index.ts"
       ],
