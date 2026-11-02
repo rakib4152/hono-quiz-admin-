@@ -107,7 +107,7 @@ export function useAdminData(initialData?: {
 
       if (res.ok) {
         const newCat = mapPrismaCategory(res.data);
-        setCategories((prev) => [newCat, ...prev]);
+        setCategories((prev: CategoryDTO[]) => [newCat, ...prev]);
         return newCat;
       }
       return null;
@@ -133,7 +133,7 @@ export function useAdminData(initialData?: {
 
       if (res.ok) {
         const newExam = mapPrismaExam(res.data);
-        setExams((prev) => [newExam, ...prev]);
+        setExams((prev: ExamDTO[]) => [newExam, ...prev]);
         return newExam;
       }
       return null;
@@ -163,7 +163,7 @@ export function useAdminData(initialData?: {
 
       if (res.ok) {
         const newQuiz = mapPrismaQuiz(res.data);
-        setQuizzes((prev) => [newQuiz, ...prev]);
+        setQuizzes((prev: QuizDTO[]) => [newQuiz, ...prev]);
         return newQuiz;
       }
       return null;

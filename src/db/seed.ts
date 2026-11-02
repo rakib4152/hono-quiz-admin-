@@ -12,10 +12,9 @@ async function main() {
     database: 'u427015050_drizzle',
   });
 
-  // Add mode: 'default' alongside your schema
   const db = drizzle(connection, { schema, mode: 'default' });
 
-  console.log('Inserting sample categories, exams, and quizzes...');
+  console.log('Inserting sample categories, exams, and quizzes into Hostinger MySQL...');
 
   // Generate IDs
   const cat1Id = randomUUID();
@@ -27,20 +26,20 @@ async function main() {
 
   // 1. Insert Categories
   await db.insert(schema.categories).values([
-    { id: cat1Id, name: 'English Literature', slug: 'english-literature' },
-    { id: cat2Id, name: 'General Knowledge', slug: 'general-knowledge' },
+    { id: cat1Id, name: 'English Literature', slug: `english-literature-${Date.now()}` },
+    { id: cat2Id, name: 'General Knowledge', slug: `general-knowledge-${Date.now()}` },
   ]);
 
   // 2. Insert Exams
   await db.insert(schema.exams).values([
-    { id: exam1Id, title: 'Honours Final Exam', description: 'Final year examination prep', categoryId: cat1Id },
-    { id: exam2Id, title: 'Model Test 1', description: 'Practice test for beginners', categoryId: cat2Id },
+    { id: exam1Id, name: 'Honours Final Exam', slug: `honours-final-${Date.now()}`, description: 'Final year examination prep', categoryId: cat1Id },
+    { id: exam2Id, name: 'Model Test 1', slug: `model-test-1-${Date.now()}`, description: 'Practice test for beginners', categoryId: cat2Id },
   ]);
 
   // 3. Insert Quizzes
   await db.insert(schema.quizzes).values([
-    { id: quiz1Id, title: 'Shakespearean Drama Quiz', examId: exam1Id, categoryId: cat1Id, status: 'published' },
-    { id: quiz2Id, title: 'World History Quiz', examId: exam2Id, categoryId: cat2Id, status: 'published' },
+    { id: quiz1Id, title: 'Shakespearean Drama Quiz', slug: `shakespeare-quiz-${Date.now()}`, examId: exam1Id, status: 'PUBLISHED' },
+    { id: quiz2Id, title: 'World History Quiz', slug: `world-history-quiz-${Date.now()}`, examId: exam2Id, status: 'PUBLISHED' },
   ]);
 
   console.log('Database seeded successfully with manual data!');

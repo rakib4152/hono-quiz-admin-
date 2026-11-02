@@ -193,7 +193,7 @@ app.all('/api/v1/auth/*', async (c) => {
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/devices/*', async (c) => {
@@ -205,7 +205,7 @@ app.all('/api/v1/devices/*', async (c) => {
     correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/attempts/*', async (c) => {
@@ -217,7 +217,7 @@ app.all('/api/v1/attempts/*', async (c) => {
     userId: '', // TODO: extract from auth
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/bookmarks/*', async (c) => {
@@ -229,7 +229,7 @@ app.all('/api/v1/bookmarks/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/saved-quizzes/*', async (c) => {
@@ -241,7 +241,7 @@ app.all('/api/v1/saved-quizzes/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/sync/*', async (c) => {
@@ -253,7 +253,7 @@ app.all('/api/v1/sync/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/quizzes/*/start', async (c) => {
@@ -265,7 +265,7 @@ app.all('/api/v1/quizzes/*/start', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/orders/*', async (c) => {
@@ -277,7 +277,7 @@ app.all('/api/v1/orders/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/payments/*', async (c) => {
@@ -289,7 +289,7 @@ app.all('/api/v1/payments/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/webhooks/*', async (c) => {
@@ -301,7 +301,7 @@ app.all('/api/v1/webhooks/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/quiz-access/*', async (c) => {
@@ -313,7 +313,7 @@ app.all('/api/v1/quiz-access/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/leaderboards/*', async (c) => {
@@ -325,7 +325,7 @@ app.all('/api/v1/leaderboards/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/badges/*', async (c) => {
@@ -337,7 +337,7 @@ app.all('/api/v1/badges/*', async (c) => {
     userId: '',
     env: c.env,
   });
-  return c.json(res.data, res.status);
+  return c.json(res.data, res.status as any);
 });
 
 // 404 handler

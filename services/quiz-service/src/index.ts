@@ -188,13 +188,18 @@ function createMockContext(req: { path: string; method: string; body?: any; corr
  * Matches the interface expected by attempt-service and other services
  */
 export const quizService = {
-  async handle(req: { path: string; method: string; body?: any; correlationId: string; env?: Bindings }) {
+  async handle(req: { path: string; method: string; body?: any; correlationId: string; env?: Bindings; query?: any; userRole?: string }) {
     const env = req.env || {} as Bindings
     const mockContext = createMockContext(req, env)
-    const response = await app.fetch(mockContext.req.raw, env, {})
+    const response = await app.fetch(mockContext.req.raw, env, {
+      waitUntil: (p: Promise<any>) => { void p },
+      passThroughOnException: () => {},
+      props: {},
+    } as any)
     const data = await response.json()
     return { status: response.status, data }
   },
 }
 
 export default app
+

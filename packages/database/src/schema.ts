@@ -100,6 +100,7 @@ export const quizzes = mysqlTable(
   {
     id: varchar('id', { length: 30 }).primaryKey(),
     examId: varchar('exam_id', { length: 30 }).notNull(),
+    categoryId: varchar('category_id', { length: 30 }),
     title: varchar('title', { length: 191 }).notNull(),
     slug: varchar('slug', { length: 191 }).notNull(),
     description: text('description'),
@@ -113,6 +114,7 @@ export const quizzes = mysqlTable(
     negativeMark: double('negative_mark').default(0).notNull(),
     maxAttempts: int('max_attempts'),
     publishedAt: timestamp('published_at'),
+    deletedAt: timestamp('deleted_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
   },
@@ -130,10 +132,12 @@ export const questions = mysqlTable('questions', {
   topicId: varchar('topic_id', { length: 30 }),
   body: text('body').notNull(),
   explanation: text('explanation'),
+  type: varchar('type', { length: 30 }).default('single_choice').notNull(),
   difficulty: int('difficulty').default(1).notNull(),
   marks: double('marks').default(1).notNull(),
   imageUrl: varchar('image_url', { length: 500 }),
   isActive: boolean('is_active').default(true).notNull(),
+  deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
 });
