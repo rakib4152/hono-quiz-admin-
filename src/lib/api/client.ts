@@ -1047,17 +1047,20 @@ export async function executeWorkerApi(
       };
     }
 
-    if (cleanPath.startsWith('/auth/register')) {
+    if (cleanPath.startsWith('/auth/clerk-sync') || cleanPath.startsWith('/auth/sync')) {
+      const clerkId = body?.clerkUserId || `user_clerk_${Date.now()}`;
       return {
-        status: 201,
+        status: 200,
         ok: true,
         data: {
           success: true,
-          message: 'Aspirant candidate account created successfully',
+          message: 'Clerk user profile synced with Hostinger MySQL',
+          authProvider: 'Clerk',
+          clerkAppId: 'app_3LavFW7A5cCB70BWweaphvP77wn',
           user: {
-            id: `usr_${Date.now()}`,
-            name: body?.name || 'Aspirant',
-            email: body?.email || 'aspirant@example.com',
+            id: clerkId,
+            name: body?.name || 'Clerk Authenticated User',
+            email: body?.email || 'user@example.com',
             role: body?.role || 'USER',
             createdAt: nowIso,
           },
@@ -1065,18 +1068,19 @@ export async function executeWorkerApi(
       };
     }
 
-    if (cleanPath.startsWith('/auth/login')) {
+    if (cleanPath.startsWith('/auth/me')) {
       return {
         status: 200,
         ok: true,
         data: {
           success: true,
-          token: `jwt_session_${Date.now()}_simulated`,
+          authProvider: 'Clerk',
           user: {
-            id: 'usr-1',
-            email: body?.email || 'tanvir@example.com',
-            name: 'Tanvir Ahmed',
-            role: 'ADMIN',
+            id: 'user_superadmin_rakib',
+            email: 'rakib.edu.bd@gmail.com',
+            name: 'Rakib Hasan (Super Admin)',
+            role: 'SUPER_ADMIN',
+            isActive: true,
           },
         },
       };

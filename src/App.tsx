@@ -243,20 +243,17 @@ export default function App() {
           res = await executeWorkerApi('/health', 'GET');
           break;
 
-        case 'register_user':
-          res = await executeWorkerApi('/auth/register', 'POST', {
-            name: 'New Candidate Aspirant',
-            email: `aspirant_${Date.now()}@example.com`,
-            password: 'SecurePass2026!',
+        case 'clerk_sync':
+          res = await executeWorkerApi('/auth/clerk-sync', 'POST', {
+            clerkUserId: `user_2s6Nq0${Math.random().toString(36).substring(2, 8)}`,
+            email: 'aspirant.clerk@example.com',
+            name: 'Clerk Verified Aspirant',
             role: 'USER',
           });
           break;
 
-        case 'login_user':
-          res = await executeWorkerApi('/auth/login', 'POST', {
-            email: 'tanvir@example.com',
-            password: 'password',
-          });
+        case 'clerk_me':
+          res = await executeWorkerApi('/auth/me', 'GET');
           break;
 
         case 'list_quizzes':
@@ -582,10 +579,16 @@ export default function App() {
                     badge: 'LeaderboardEntry',
                   },
                   {
-                    key: 'register_user',
-                    label: 'POST /api/v1/auth/register',
-                    desc: 'Creates User with role, hashed password, and Session',
-                    badge: 'User / Session',
+                    key: 'clerk_sync',
+                    label: 'POST /api/v1/auth/clerk-sync',
+                    desc: 'Synchronizes Clerk user profile to Hostinger MySQL users table',
+                    badge: 'Clerk Auth',
+                  },
+                  {
+                    key: 'clerk_me',
+                    label: 'GET /api/v1/auth/me',
+                    desc: 'Validates Clerk session and fetches current user claims',
+                    badge: 'Clerk Session',
                   },
                   {
                     key: 'list_quizzes',

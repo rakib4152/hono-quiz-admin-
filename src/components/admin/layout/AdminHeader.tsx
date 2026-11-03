@@ -5,19 +5,23 @@ import {
   Sun,
   Moon,
   ChevronRight,
-  Shield,
-  LogOut,
-  ExternalLink,
   Menu,
   CheckCircle,
   AlertTriangle,
   Server,
   RefreshCw,
   Settings,
-  Check,
 } from 'lucide-react';
 import { Button } from '../../ui/button.js';
 import { Badge } from '../../ui/badge.js';
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useUser,
+} from '@clerk/clerk-react';
 import { Input } from '../../ui/input.js';
 import { Label } from '../../ui/label.js';
 import {
@@ -52,10 +56,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onConfigureApiUrl,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
   const [tempApiUrl, setTempApiUrl] = useState(apiUrl);
   const [unreadCount, setUnreadCount] = useState(3);
+  const { user, isSignedIn } = useUser();
 
   // Generate breadcrumbs from path
   const pathParts = currentPath.split('/').filter(Boolean);
@@ -196,7 +200,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             size="icon"
             onClick={() => {
               setShowNotifications(!showNotifications);
-              setShowProfileMenu(false);
             }}
             className="h-8 w-8 relative text-slate-400 hover:text-slate-200"
           >
@@ -238,56 +241,44 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           )}
         </div>
 
-        {/* Admin Profile Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowProfileMenu(!showProfileMenu);
-              setShowNotifications(false);
-            }}
-            className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-slate-800/60 transition"
-          >
-            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-orange-500 to-amber-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-              RH
-            </div>
-          </button>
-
-          {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 text-left animate-in fade-in-50 zoom-in-95">
-              <div className="px-3 py-2 border-b border-slate-800 mb-1">
-                <div className="text-xs font-semibold text-white">Rakib Hasan</div>
-                <div className="text-[10px] text-slate-400 truncate">rakib.edu.bd@gmail.com</div>
-                <Badge variant="outline" className="mt-1 text-[9px] border-orange-500/40 text-orange-400">
-                  Super Administrator
-                </Badge>
+        {/* Clerk Authentication Controls */}
+        <div className="flex items-center gap-2 pl-1 border-l border-slate-800 ml-1">
+          <SignedIn>
+            <div className="flex items-center gap-2.5">
+              <div className="hidden lg:flex flex-col text-right leading-none">
+                <span className="text-xs font-semibold text-white">
+                  {user?.fullName || user?.firstName || 'Clerk Admin'}
+                </span>
+                <span className="text-[10px] text-slate-400 max-w-[130px] truncate">
+                  {user?.primaryEmailAddress?.emailAddress || 'Authenticated'}
+                </span>
               </div>
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  onNavigate('/admin/settings');
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: 'h-8 w-8 ring-2 ring-orange-500/50 rounded-full',
+                    userButtonPopoverCard: 'bg-slate-900 border border-slate-800 text-white shadow-2xl',
+                  },
                 }}
-                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
-              >
-                <Shield className="h-3.5 w-3.5" /> Platform Security & API
-              </button>
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  onNavigate('/admin/audit-logs');
-                }}
-                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
-              >
-                <ExternalLink className="h-3.5 w-3.5" /> Audit Trail
-              </button>
-              <div className="border-t border-slate-800 my-1" />
-              <button
-                onClick={() => setShowProfileMenu(false)}
-                className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-              >
-                <LogOut className="h-3.5 w-3.5" /> Sign Out
-              </button>
+              />
             </div>
-          )}
+          </SignedIn>
+
+          <SignedOut>
+            <div className="flex items-center gap-2">
+              <SignInButton mode="modal">
+                <Button size="sm" className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm transition">
+                  Sign In
+                </Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm" variant="outline" className="h-8 px-3 text-xs border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                  Sign Up
+                </Button>
+              </SignUpButton>
+            </div>
+          </SignedOut>
         </div>
       </div>
 

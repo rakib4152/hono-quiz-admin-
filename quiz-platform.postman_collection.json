@@ -767,55 +767,38 @@
       "name": "10. Authentication & Devices",
       "item": [
         {
-          "name": "Register User",
+          "name": "Sync Clerk User to MySQL",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Candidate One\",\n  \"email\": \"candidate1@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "register"]
-            }
-          }
-        },
-        {
-          "name": "Login",
-          "request": {
-            "method": "POST",
-            "header": [
+              },
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Authorization",
+                "value": "Bearer {{clerkJwtToken}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"candidate1@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"deviceInfo\": {\n    \"userAgent\": \"PostmanRuntime/7.40.0\",\n    \"platform\": \"macOS\"\n  }\n}"
+              "raw": "{\n  \"clerkUserId\": \"user_2s6Nq0AbCdEfGhIjKlMnOpQrSt\",\n  \"name\": \"Candidate Aspirant\",\n  \"email\": \"candidate@example.com\",\n  \"role\": \"USER\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/clerk-sync",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "path": ["api", "v1", "auth", "clerk-sync"]
             }
           }
         },
         {
-          "name": "Get Current User Profile",
+          "name": "Get Authenticated Clerk User Profile",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{authToken}}"
+                "value": "Bearer {{clerkJwtToken}}"
               }
             ],
             "url": {
@@ -826,19 +809,48 @@
           }
         },
         {
-          "name": "List Active Devices",
+          "name": "Register Device to Clerk User",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
                 "key": "Authorization",
-                "value": "Bearer {{authToken}}"
+                "value": "Bearer {{clerkJwtToken}}"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceKey\": \"device_pixel_8_pro_01\",\n  \"platform\": \"android\"\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/devices",
+              "raw": "{{baseUrl}}/api/v1/devices/register",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "devices"]
+              "path": ["api", "v1", "devices", "register"]
+            }
+          }
+        },
+        {
+          "name": "Inter-Service Verify Clerk Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{clerkJwtToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/verify-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "internal", "verify-token"]
             }
           }
         }

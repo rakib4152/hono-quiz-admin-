@@ -11,10 +11,11 @@
 | :--- | :--- | :--- |
 | **Database** | **Hostinger Remote MySQL 8.0 InnoDB** (`u427015050_drizzle` / `srv1562.hstgr.io`) | **DO NOT USE PostgreSQL, SQLite, or Neon**. All tables use standard MySQL types (`mysqlTable`, `varchar`, `int`, `timestamp`, `double`, `boolean`, `text`). |
 | **ORM** | **Drizzle ORM** (`drizzle-orm/mysql2` & `drizzle-kit`) | **STRICTLY NO PRISMA**. Prisma has been completely deprecated and removed. Never create `.prisma` files or introduce `@prisma/client`. |
+| **Authentication** | **Clerk** (`@clerk/clerk-react` / Application `app_3LavFW7A5cCB70BWweaphvP77wn`) | **NO CUSTOM PASSWORD AUTH**. Custom password registration and password hashes are strictly deleted in favor of Clerk authentication. |
 | **API Backend** | **Cloudflare Workers + Hono Framework** | Edge-native V8 isolate runtime. All endpoints run as Hono sub-apps or routes under `/api/v1`. |
 | **Database Pooling** | **Cloudflare Hyperdrive** | Connection multiplexing via `c.env.HYPERDRIVE` with fallback to direct Hostinger MySQL connection string. |
 | **V8 Compatibility** | `mysql2/promise` with `disableEval: true` | Required because Cloudflare Workers isolates block `eval()` which `mysql2` uses internally by default. |
-| **Frontend** | **React 19 + Vite + Tailwind CSS** | Clean admin dashboard, interactive API runner, responsive design, dark/light theme. |
+| **Frontend** | **React 19 + Vite + Tailwind CSS** | Clean admin dashboard, Clerk visible auth controls, interactive API runner, responsive design, dark/light theme. |
 
 ---
 

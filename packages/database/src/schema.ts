@@ -12,14 +12,16 @@ import {
 import { relations } from 'drizzle-orm';
 
 /**
- * Users Table
+ * Users Table (Clerk Authentication Integrated)
  */
 export const users = mysqlTable(
   'users',
   {
-    id: varchar('id', { length: 30 }).primaryKey(),
+    // Clerk user IDs (e.g. 'user_2s6Nq...') or standard identifiers
+    id: varchar('id', { length: 64 }).primaryKey(),
     name: varchar('name', { length: 191 }),
     email: varchar('email', { length: 191 }).unique(),
+    // Deprecated: Authentication managed securely by Clerk
     passwordHash: varchar('password_hash', { length: 255 }),
     role: varchar('role', { length: 20 }).default('USER').notNull(),
     isActive: boolean('is_active').default(true).notNull(),

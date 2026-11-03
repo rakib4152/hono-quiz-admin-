@@ -178,43 +178,58 @@ app.get('/api/v1/openapi.json', (c) => {
       '/api/v1/payments/verify': { post: { summary: 'Verify payment and grant QuizAccess' } },
       '/api/v1/sync/attempts': { post: { summary: 'Offline attempt synchronization from SQLite' } },
       '/api/v1/leaderboards/{id}': { get: { summary: 'Get quiz leaderboard' } },
+      '/api/v1/auth/clerk-sync': { post: { summary: 'Synchronize Clerk user profile to Hostinger MySQL (Clerk Auth)' } },
+      '/api/v1/auth/me': { get: { summary: 'Get current authenticated Clerk user session profile' } },
+      '/api/v1/devices/register': { post: { summary: 'Register candidate mobile device to Clerk user' } },
     },
   });
 });
 
-// Other services still use custom handle() pattern - they need similar refactoring
-// For now, keep manual dispatch for services not yet converted to app.route()
+// Helper to extract token and clerk userId
+const getAuthContext = (c: any) => {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
+  const clerkUserId = c.req.header('X-Clerk-User-Id') || (token.startsWith('user_') ? token : '');
+  const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
+  return { token, clerkUserId, correlationId };
+};
+
+// Clerk Authentication Microservice Handler
 app.all('/api/v1/auth/*', async (c) => {
+  const { token, clerkUserId, correlationId } = getAuthContext(c);
   const res = await authService.handle({
     path: c.req.path.replace('/api/v1', ''),
     method: c.req.method,
     body: await c.req.json().catch(() => ({})),
-    token: c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '',
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
+    token,
+    clerkUserId,
+    correlationId,
     env: c.env,
   });
   return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/devices/*', async (c) => {
+  const { token, clerkUserId, correlationId } = getAuthContext(c);
   const res = await authService.handle({
     path: c.req.path.replace('/api/v1', ''),
     method: c.req.method,
     body: await c.req.json().catch(() => ({})),
-    token: c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '',
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
+    token,
+    clerkUserId,
+    correlationId,
     env: c.env,
   });
   return c.json(res.data, res.status as any);
 });
 
 app.all('/api/v1/attempts/*', async (c) => {
+  const { token, clerkUserId, correlationId } = getAuthContext(c);
   const res = await attemptService.handle({
     path: c.req.path.replace('/api/v1', ''),
     method: c.req.method,
     body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '', // TODO: extract from auth
+    correlationId,
+    userId: clerkUserId || token,
     env: c.env,
   });
   return c.json(res.data, res.status as any);
