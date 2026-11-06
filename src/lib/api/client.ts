@@ -753,9 +753,30 @@ export const initialOrders: OrderPaymentDTO[] = [
 ];
 
 // Base API URL configuration
-export const DEFAULT_API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://localhost:8787/api/v1';
+function resolveDefaultApiBaseUrl(): string {
+  const rawEnv =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isRemoteBrowser = hostname !== 'localhost' && hostname !== '127.0.0.1';
+    const pointsToLocalWrangler = /^https?:\/\/(localhost|127\.0\.0\.1):8787(\/api\/v1)?\/?$/i.test(
+      rawEnv
+    );
+
+    if (!rawEnv || pointsToLocalWrangler || (isRemoteBrowser && /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(rawEnv))) {
+      return '/api/v1';
+    }
+  }
+
+  if (!rawEnv || /^https?:\/\/(localhost|127\.0\.0\.1):8787\/?$/i.test(rawEnv)) {
+    return '/api/v1';
+  }
+
+  return rawEnv.replace(/\/+$/, '');
+}
+
+export const DEFAULT_API_BASE_URL = resolveDefaultApiBaseUrl();
 
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {

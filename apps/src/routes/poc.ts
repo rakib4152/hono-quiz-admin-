@@ -19,7 +19,7 @@ export async function handlePocCheck({
   env: AppEnv['Bindings'];
   req: Request;
   json: (data: any, status?: number) => Response;
-  executionCtx: { waitUntil: (p: Promise<any>) => void };
+  executionCtx?: { waitUntil: (p: Promise<any>) => void };
 }) {
   const connectionUrl = resolveDatabaseUrl(env as any);
 
@@ -41,7 +41,7 @@ export async function handlePocCheck({
     return json({
       connected: probe.ok,
       latencyMs: probe.latencyMs,
-      database: 'u427015050_quiz',
+      database: 'u427015050_drizzle',
       driver: env?.HYPERDRIVE ? 'Cloudflare Hyperdrive (Accelerated Pooling via Drizzle/mysql2)' : 'Direct MySQL TCP (Drizzle/mysql2)',
       sslEnabled: true,
       error: probe.error,
@@ -50,12 +50,17 @@ export async function handlePocCheck({
     return json(
       {
         connected: false,
-        database: 'u427015050_quiz',
+        database: 'u427015050_drizzle',
         error: err?.cause?.message || err?.message || String(err),
       },
       500
     );
   } finally {
-    executionCtx.waitUntil(endDrizzleConnection(db));
+    const cleanup = endDrizzleConnection(db);
+    if (executionCtx && typeof executionCtx.waitUntil === 'function') {
+      executionCtx.waitUntil(cleanup);
+    } else {
+      await cleanup;
+    }
   }
 }

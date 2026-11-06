@@ -43,9 +43,29 @@ const startupTime = Date.now();
  */
 export const app = new Hono<{ Bindings: AppEnv['Bindings'] }>();
 
+function getExecutionCtx(c: any): { waitUntil: (p: Promise<any>) => void } | undefined {
+  try {
+    return c.executionCtx;
+  } catch {
+    return undefined;
+  }
+}
+
+async function cleanupDb(db: DrizzleDB, c: any): Promise<void> {
+  const ctx = getExecutionCtx(c);
+  const cleanup = endDrizzleConnection(db);
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(cleanup);
+  } else {
+    await cleanup;
+  }
+}
+
 // Global CORS middleware for API and auth routes
 app.use('*', (c, next) => {
-  const rawOrigins = c.env?.CORS_ALLOWED_ORIGINS || 'http://localhost:3000';
+  const rawOrigins =
+    c.env?.CORS_ALLOWED_ORIGINS ||
+    'https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000';
   const allowedOrigins = typeof rawOrigins === 'string'
     ? rawOrigins.split(',').map((o) => o.trim()).filter(Boolean)
     : [rawOrigins];
@@ -56,6 +76,9 @@ app.use('*', (c, next) => {
         return origin || allowedOrigins[0];
       }
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return origin;
+      }
+      if (/^https:\/\/[a-z0-9-]+\.asia-east1\.run\.app$/.test(origin)) {
         return origin;
       }
       return null;
@@ -82,18 +105,24 @@ app.route('/api/v1', quizApp);
 app.route('/api/v1', authApp);
 app.route('/', authApp);
 
-// Health & info endpoints (at root level, not under /api/v1)
+// Health & info endpoints (available at both root and /api/v1)
 app.get('/health', (c) => {
   return c.json(createHealthHandler(c.env, startupTime));
 });
 
-// TEMPORARY DB diagnostic route
-app.get('/health/db', async (c) => {
-  const db = await createDrizzleClient(c.env as any);
+app.get('/api/v1/health', (c) => {
+  return c.json(createHealthHandler(c.env, startupTime));
+});
+
+// DB diagnostic routes
+const handleRawDbCheck = async (c: any) => {
+  let db: DrizzleDB | null = null;
   try {
+    db = await createDrizzleClient(c.env as any);
     const result = await db.execute(`SELECT 1`);
     return c.json({
       connected: true,
+      database: 'u427015050_drizzle',
       result,
     }, 200);
   } catch (err: any) {
@@ -106,24 +135,32 @@ app.get('/health/db', async (c) => {
       targetDatabase: 'u427015050_drizzle',
     }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    if (db) {
+      await cleanupDb(db, c);
+    }
   }
-});
+};
+
+app.get('/health/db', handleRawDbCheck);
+app.get('/api/v1/health/db', handleRawDbCheck);
 
 app.get('/', (c) => {
   return c.json({
     service: 'Scalable Quiz Platform Production API',
+    domain: 'api.jobexambd.com',
     version: c.env?.API_VERSION || 'v1',
     runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Drizzle)',
     docs: '/api/v1/openapi.json',
-    health: '/health',
+    health: '/api/v1/health',
     dbHealth: '/api/v1/db-health',
+    authSync: '/api/v1/auth/clerk-sync',
     bindings: {
       kv: !!c.env?.CACHE_KV,
       hyperdrive: !!c.env?.HYPERDRIVE,
       r2: !!c.env?.ASSETS_R2,
     },
     services: [
+      'auth (/api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices/register)',
       'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/quizzes)',
       'attempts (/api/v1/quizzes/:id/start, /api/v1/attempts)',
       'payments (/api/v1/orders, /api/v1/payments)',
@@ -134,29 +171,49 @@ app.get('/', (c) => {
 
 // Database PoC & Connectivity Probes
 app.get('/poc/db-check', (c) => {
-  return handlePocCheck({ env: c.env, req: c.req.raw, json: c.json.bind(c), executionCtx: c.executionCtx });
+  return handlePocCheck({
+    env: c.env,
+    req: c.req.raw,
+    json: c.json.bind(c),
+    executionCtx: getExecutionCtx(c),
+  });
 });
 
-app.get('/api/v1/db-health', async (c) => {
-  const db = await createDrizzleClient(c.env as any);
+app.get('/api/v1/poc/db-check', (c) => {
+  return handlePocCheck({
+    env: c.env,
+    req: c.req.raw,
+    json: c.json.bind(c),
+    executionCtx: getExecutionCtx(c),
+  });
+});
+
+const handleDbHealth = async (c: any) => {
+  let db: DrizzleDB | null = null;
   try {
+    db = await createDrizzleClient(c.env as any);
     const probe = await verifyDatabaseConnection(db);
     return c.json({
       connected: probe.ok,
       latencyMs: probe.latencyMs,
-      targetDatabase: 'u427015050_quiz',
+      targetDatabase: 'u427015050_drizzle',
       error: probe.error,
     }, probe.ok ? 200 : 500);
-  } catch (err) {
+  } catch (err: any) {
     return c.json({
       connected: false,
-      error: 'Drizzle client is not initialized. Please verify DATABASE_URL or HYPERDRIVE binding.',
-      targetDatabase: 'u427015050_quiz',
+      error: err?.cause?.message || err?.message || 'Drizzle client failed to connect. Verify DATABASE_URL or HYPERDRIVE binding.',
+      targetDatabase: 'u427015050_drizzle',
     }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    if (db) {
+      await cleanupDb(db, c);
+    }
   }
-});
+};
+
+app.get('/api/v1/db-health', handleDbHealth);
+app.get('/db-health', handleDbHealth);
 
 // OpenAPI Specification
 app.get('/api/v1/openapi.json', (c) => {
@@ -169,7 +226,9 @@ app.get('/api/v1/openapi.json', (c) => {
     },
     paths: {
       '/health': { get: { summary: 'System Health Check' } },
+      '/api/v1/health': { get: { summary: 'System Health Check (v1)' } },
       '/api/v1/db-health': { get: { summary: 'Database Ping and Latency Probe' } },
+      '/api/v1/poc/db-check': { get: { summary: 'Database Proof-of-Concept Probe' } },
       '/api/v1/categories': { get: { summary: 'List categories' }, post: { summary: 'Create category (Strict MySQL)' } },
       '/api/v1/exams': { get: { summary: 'List exams' }, post: { summary: 'Create exam (Strict MySQL)' } },
       '/api/v1/quizzes': { get: { summary: 'List quizzes' }, post: { summary: 'Create quiz (Strict MySQL)' } },

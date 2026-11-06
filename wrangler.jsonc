@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "quiz-platform-api",
+	"name": "hono-quiz-admin",
 	"main": "apps/src/index.ts",
 	"compatibility_date": "2025-02-14",
 	"compatibility_flags": [
@@ -19,23 +19,22 @@
 	"kv_namespaces": [
 		{
 			"binding": "CACHE_KV",
-			"id": "quiz-cache-kv-id"
+			"id": "9113d470147f41c59d8fdf385a0b25cb"
 		},
 		{
 			"binding": "quiz_cache",
-			"id": "9113d470147f41c59d8fdf385a0b25cb",
-			"remote": true
+			"id": "9113d470147f41c59d8fdf385a0b25cb"
 		}
 	],
-	"r2_buckets": [
+	"routes": [
 		{
-			"binding": "ASSETS_R2",
-			"bucket_name": "quiz-assets-production"
+			"pattern": "api.jobexambd.com",
+			"custom_domain": true
 		}
 	],
 	"vars": {
-		"ENVIRONMENT": "development",
+		"ENVIRONMENT": "production",
 		"API_VERSION": "v1",
-		"CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:3002,http://localhost:5173"
+		"CORS_ALLOWED_ORIGINS": "https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000,http://localhost:3002,http://localhost:5173"
 	}
 }

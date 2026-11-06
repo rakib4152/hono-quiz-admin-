@@ -6,6 +6,19 @@ import * as schema from './schema';
 export * from './schema';
 export { schema };
 
+const DEFAULT_HOSTINGER_MYSQL_URL =
+  'mysql://u427015050_drizzlequiz:R.r.4152@srv1562.hstgr.io:3306/u427015050_drizzle';
+
+export function normalizeMysqlConnectionString(raw?: string): string {
+  if (!raw || typeof raw !== 'string') return '';
+  let fixed = raw.trim();
+  if (fixed.startsWith('ysql://')) {
+    fixed = `m${fixed}`;
+  }
+  fixed = fixed.replace(/\/u427015050_drizzlequiz(\?.*)?$/i, '/u427015050_drizzle$1');
+  return fixed;
+}
+
 /**
  * Creates a Drizzle DB instance using Hyperdrive env or DATABASE_URL.
  * Creates a new connection per call (per request) with disableEval: true
@@ -20,12 +33,12 @@ export async function createDrizzleClient(env: any): Promise<MySql2Database<type
 
   if (env?.HYPERDRIVE) {
     if (env.HYPERDRIVE.connectionString) {
-      const url = new URL(env.HYPERDRIVE.connectionString);
+      const url = new URL(normalizeMysqlConnectionString(env.HYPERDRIVE.connectionString));
       config.host = url.hostname;
       config.port = Number(url.port) || 3306;
       config.user = url.username;
       config.password = url.password;
-      config.database = url.pathname.slice(1);
+      config.database = url.pathname.slice(1) || 'u427015050_drizzle';
     } else {
       config.host = env.HYPERDRIVE.host || 'srv1562.hstgr.io';
       config.port = Number(env.HYPERDRIVE.port) || 3306;
@@ -34,14 +47,19 @@ export async function createDrizzleClient(env: any): Promise<MySql2Database<type
       config.database = env.HYPERDRIVE.database || 'u427015050_drizzle';
     }
   } else {
-    const connectionString = env?.DATABASE_URL || env?.QUIZ_DATABASE_URL || process.env.DATABASE_URL || '';
+    const rawConn =
+      env?.DATABASE_URL ||
+      env?.QUIZ_DATABASE_URL ||
+      (typeof process !== 'undefined' ? process.env?.DATABASE_URL || process.env?.QUIZ_DATABASE_URL : '') ||
+      '';
+    const connectionString = normalizeMysqlConnectionString(rawConn);
     if (connectionString) {
       const url = new URL(connectionString);
       config.host = url.hostname;
       config.port = Number(url.port) || 3306;
       config.user = url.username;
       config.password = url.password;
-      config.database = url.pathname.slice(1);
+      config.database = url.pathname.slice(1) || 'u427015050_drizzle';
     } else {
       // Direct remote Hostinger MySQL fallback
       config.host = 'srv1562.hstgr.io';
@@ -66,12 +84,17 @@ export type DrizzleDB = MySql2Database<typeof schema>;
 export function resolveDatabaseUrl(env: any): string {
   if (env?.HYPERDRIVE) {
     if (env.HYPERDRIVE.connectionString) {
-      return env.HYPERDRIVE.connectionString;
+      return normalizeMysqlConnectionString(env.HYPERDRIVE.connectionString);
     }
     const { user, password, host, port, database } = env.HYPERDRIVE;
-    return `mysql://${user}:${password}@${host}:${port || 3306}/${database}`;
+    return `mysql://${user}:${password}@${host}:${port || 3306}/${database || 'u427015050_drizzle'}`;
   }
-  return env?.DATABASE_URL || env?.QUIZ_DATABASE_URL || process.env.DATABASE_URL || '';
+  const rawConn =
+    env?.DATABASE_URL ||
+    env?.QUIZ_DATABASE_URL ||
+    (typeof process !== 'undefined' ? process.env?.DATABASE_URL || process.env?.QUIZ_DATABASE_URL : '') ||
+    '';
+  return normalizeMysqlConnectionString(rawConn) || DEFAULT_HOSTINGER_MYSQL_URL;
 }
 
 export interface VerifyConnectionResult {

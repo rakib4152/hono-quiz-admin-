@@ -584,7 +584,7 @@ function getExecutionCtx(c: any): WorkerExecutionContext | undefined {
  */
 export const authApp = new Hono<{ Bindings: AuthBindings }>();
 
-authApp.post('/auth/clerk-sync', async (c) => {
+const handleClerkSyncRequest = async (c: any) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
   const headerClerkUserId = c.req.header('X-Clerk-User-Id') || '';
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
@@ -600,22 +600,46 @@ authApp.post('/auth/clerk-sync', async (c) => {
     requireDatabase: true,
   });
   return c.json(res.data, res.status as any);
-});
+};
 
-authApp.post('/auth/sync', async (c) => {
+authApp.post('/auth/clerk-sync', handleClerkSyncRequest);
+authApp.post('/auth/clerk-sync/', handleClerkSyncRequest);
+authApp.post('/auth/sync', handleClerkSyncRequest);
+authApp.post('/auth/sync/', handleClerkSyncRequest);
+
+const handleClerkSyncGetProbe = (c: any) => {
+  return c.json(
+    {
+      success: true,
+      endpoint: '/api/v1/auth/clerk-sync',
+      method: 'POST',
+      authProvider: 'Clerk',
+      clerkAppId: 'app_3LavFW7A5cCB70BWweaphvP77wn',
+      message:
+        'Clerk user sync endpoint is active. Send a POST request with JSON body { clerkUserId, email, name } to create or update a user in Hostinger MySQL.',
+    },
+    200
+  );
+};
+
+authApp.get('/auth/clerk-sync', handleClerkSyncGetProbe);
+authApp.get('/auth/clerk-sync/', handleClerkSyncGetProbe);
+
+authApp.post('/internal/verify-token', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
-  const headerClerkUserId = c.req.header('X-Clerk-User-Id') || '';
+  const clerkUserId = c.req.header('X-Clerk-User-Id') || (token.startsWith('user_') ? token : '');
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
-  const rawBody = await c.req.json().catch(() => ({}));
+  const body = await c.req.json().catch(() => ({}));
 
-  const res = await executeClerkSync({
-    rawBody,
+  const res = await authService.handle({
+    path: '/internal/verify-token',
+    method: 'POST',
+    body,
     token,
-    headerClerkUserId,
+    clerkUserId,
     correlationId,
     env: c.env,
     executionCtx: getExecutionCtx(c),
-    requireDatabase: true,
   });
   return c.json(res.data, res.status as any);
 });
@@ -624,7 +648,7 @@ authApp.all('/auth/*', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
   const clerkUserId = c.req.header('X-Clerk-User-Id') || (token.startsWith('user_') ? token : '');
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
-  const subPath = c.req.path.replace(/^\/api\/v1/, '');
+  const subPath = c.req.path.replace(/^\/api\/v1/, '').replace(/\/+$/, '') || '/';
 
   const res = await authService.handle({
     path: subPath,
@@ -643,7 +667,7 @@ authApp.all('/devices/*', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
   const clerkUserId = c.req.header('X-Clerk-User-Id') || (token.startsWith('user_') ? token : '');
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
-  const subPath = c.req.path.replace(/^\/api\/v1/, '');
+  const subPath = c.req.path.replace(/^\/api\/v1/, '').replace(/\/+$/, '') || '/';
 
   const res = await authService.handle({
     path: subPath,

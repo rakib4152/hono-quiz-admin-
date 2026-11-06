@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "tsx server.ts",
     "dev:frontend": "vite --port=3002 --host=0.0.0.0",
     "dev:api": "wrangler dev --port 8787",
     "dev:api:apps": "wrangler dev --config apps/wrangler.jsonc --port 8787",
     "dev:all": "concurrently -k -n \"FE,API\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:api\"",
     "build": "vite build",
+    "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
@@ -39,6 +40,7 @@
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
+    "tsx": "^4.23.15",
     "vite": "^8.3.0",
     "zod": "^4.6.5"
   },
@@ -51,7 +53,6 @@
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "wrangler": "^4.150.0"
   }
