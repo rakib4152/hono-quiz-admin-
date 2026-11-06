@@ -179,7 +179,7 @@ export const attempts = mysqlTable(
   'attempts',
   {
     id: varchar('id', { length: 30 }).primaryKey(),
-    userId: varchar('user_id', { length: 30 }).notNull(),
+    userId: varchar('user_id', { length: 64 }).notNull(),
     quizId: varchar('quiz_id', { length: 30 }).notNull(),
     status: varchar('status', { length: 20 }).default('IN_PROGRESS').notNull(),
     requestId: varchar('request_id', { length: 191 }).unique(),
@@ -220,7 +220,7 @@ export const attemptAnswers = mysqlTable('attempt_answers', {
 export const bookmarks = mysqlTable(
   'bookmarks',
   {
-    userId: varchar('user_id', { length: 30 }).notNull(),
+    userId: varchar('user_id', { length: 64 }).notNull(),
     questionId: varchar('question_id', { length: 30 }).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
@@ -236,7 +236,7 @@ export const quizAccess = mysqlTable(
   'quiz_access',
   {
     id: varchar('id', { length: 30 }).primaryKey(),
-    userId: varchar('user_id', { length: 30 }).notNull(),
+    userId: varchar('user_id', { length: 64 }).notNull(),
     quizId: varchar('quiz_id', { length: 30 }).notNull(),
     orderId: varchar('order_id', { length: 30 }),
     grantedAt: timestamp('granted_at').defaultNow().notNull(),
@@ -252,7 +252,7 @@ export const quizAccess = mysqlTable(
  */
 export const orders = mysqlTable('orders', {
   id: varchar('id', { length: 30 }).primaryKey(),
-  userId: varchar('user_id', { length: 30 }).notNull(),
+  userId: varchar('user_id', { length: 64 }).notNull(),
   quizId: varchar('quiz_id', { length: 30 }).notNull(),
   amount: int('amount').notNull(),
   currency: varchar('currency', { length: 3 }).default('BDT').notNull(),

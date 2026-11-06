@@ -916,6 +916,19 @@ export interface LiveApiResponse<T> {
   error?: string;
 }
 
+let clerkTokenGetter: (() => Promise<string | null>) | null = null;
+let clerkUserIdGetter: (() => string | null) | null = null;
+
+export function registerClerkAuthContext(
+  getters: {
+    getToken: () => Promise<string | null>;
+    getUserId: () => string | null;
+  } | null
+): void {
+  clerkTokenGetter = getters ? getters.getToken : null;
+  clerkUserIdGetter = getters ? getters.getUserId : null;
+}
+
 /**
  * Smart API client: Attempts live HTTP fetch to Hono on Wrangler/Cloudflare first.
  * If server is offline / unreachable, gracefully falls back to the in-memory Microservices Gateway.
@@ -934,6 +947,10 @@ export async function apiFetch<T = any>(
   const fullUrl = `${baseUrl.replace(/\/+$/, '')}${cleanPath}`;
   const method = options.method || 'GET';
 
+  const resolvedToken =
+    options.token ?? (clerkTokenGetter ? await clerkTokenGetter().catch(() => null) : null);
+  const resolvedClerkUserId = clerkUserIdGetter ? clerkUserIdGetter() : null;
+
   // 1. Attempt live HTTP request to Hono API (e.g. http://localhost:8787/api/v1/...)
   try {
     const controller = new AbortController();
@@ -944,8 +961,11 @@ export async function apiFetch<T = any>(
       Accept: 'application/json',
       ...(options.headers || {}),
     };
-    if (options.token) {
-      reqHeaders['Authorization'] = `Bearer ${options.token}`;
+    if (resolvedToken) {
+      reqHeaders['Authorization'] = `Bearer ${resolvedToken}`;
+    }
+    if (resolvedClerkUserId) {
+      reqHeaders['X-Clerk-User-Id'] = resolvedClerkUserId;
     }
 
     const response = await fetch(fullUrl, {
@@ -969,7 +989,12 @@ export async function apiFetch<T = any>(
     console.warn(`[API] Live backend at ${fullUrl} not reachable. Falling back to local Gateway:`, err.message);
 
     try {
-      const fallback = await executeWorkerApi(cleanPath, method, options.body, options.token);
+      const fallback = await executeWorkerApi(
+        cleanPath,
+        method,
+        options.body,
+        resolvedToken || resolvedClerkUserId || undefined
+      );
       const resData = fallback.data?.data !== undefined ? fallback.data.data : fallback.data;
       return {
         ok: fallback.ok,
@@ -1005,12 +1030,19 @@ export async function executeWorkerApi(
   const cleanPath = path.startsWith('/') ? path : '/' + path;
   const fullUrl = `${baseUrl.replace(/\/+$/, '')}${cleanPath}`;
 
+  const resolvedToken =
+    token ?? (clerkTokenGetter ? await clerkTokenGetter().catch(() => null) : null);
+  const resolvedClerkUserId = clerkUserIdGetter ? clerkUserIdGetter() : null;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (resolvedToken) {
+    headers['Authorization'] = `Bearer ${resolvedToken}`;
+  }
+  if (resolvedClerkUserId) {
+    headers['X-Clerk-User-Id'] = resolvedClerkUserId;
   }
 
   // 1. Try live HTTP call to Wrangler / Cloudflare Worker (e.g. http://localhost:8787/api/v1/...)

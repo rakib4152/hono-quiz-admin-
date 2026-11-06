@@ -15,6 +15,9 @@ import {
 import { Button } from '../../ui/button.js';
 import { Badge } from '../../ui/badge.js';
 import {
+  ClerkFailed,
+  ClerkLoaded,
+  ClerkLoading,
   SignedIn,
   SignedOut,
   SignInButton,
@@ -22,6 +25,7 @@ import {
   UserButton,
   useUser,
 } from '@clerk/clerk-react';
+import { useClerkEnabled } from '../../auth/ClerkAuthProvider.js';
 import { Input } from '../../ui/input.js';
 import { Label } from '../../ui/label.js';
 import {
@@ -59,7 +63,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const [showApiConfig, setShowApiConfig] = useState(false);
   const [tempApiUrl, setTempApiUrl] = useState(apiUrl);
   const [unreadCount, setUnreadCount] = useState(3);
-  const { user, isSignedIn } = useUser();
+  const isClerkEnabled = useClerkEnabled();
 
   // Generate breadcrumbs from path
   const pathParts = currentPath.split('/').filter(Boolean);
@@ -243,42 +247,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
         {/* Clerk Authentication Controls */}
         <div className="flex items-center gap-2 pl-1 border-l border-slate-800 ml-1">
-          <SignedIn>
-            <div className="flex items-center gap-2.5">
-              <div className="hidden lg:flex flex-col text-right leading-none">
-                <span className="text-xs font-semibold text-white">
-                  {user?.fullName || user?.firstName || 'Clerk Admin'}
-                </span>
-                <span className="text-[10px] text-slate-400 max-w-[130px] truncate">
-                  {user?.primaryEmailAddress?.emailAddress || 'Authenticated'}
-                </span>
-              </div>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: 'h-8 w-8 ring-2 ring-orange-500/50 rounded-full',
-                    userButtonPopoverCard: 'bg-slate-900 border border-slate-800 text-white shadow-2xl',
-                  },
-                }}
-              />
-            </div>
-          </SignedIn>
-
-          <SignedOut>
-            <div className="flex items-center gap-2">
-              <SignInButton mode="modal">
-                <Button size="sm" className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm transition">
-                  Sign In
-                </Button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button size="sm" variant="outline" className="h-8 px-3 text-xs border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition">
-                  Sign Up
-                </Button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
+          {isClerkEnabled ? (
+            <ClerkHeaderControls />
+          ) : (
+            <Badge variant="secondary" className="text-[11px] font-medium">
+              Clerk Admin
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -346,5 +321,60 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         </DialogFooter>
       </Dialog>
     </header>
+  );
+};
+
+const ClerkHeaderControls: React.FC = () => {
+  const { user } = useUser();
+
+  return (
+    <>
+      <ClerkLoading>
+        <div className="h-8 w-20 rounded-md bg-slate-800/60 animate-pulse" />
+      </ClerkLoading>
+      <ClerkFailed>
+        <Badge variant="secondary" className="text-[11px] font-medium">
+          Clerk Admin
+        </Badge>
+      </ClerkFailed>
+      <ClerkLoaded>
+        <SignedIn>
+          <div className="flex items-center gap-2.5">
+            <div className="hidden lg:flex flex-col text-right leading-none">
+              <span className="text-xs font-semibold text-white">
+                {user?.fullName || user?.firstName || 'Clerk Admin'}
+              </span>
+              <span className="text-[10px] text-slate-400 max-w-[130px] truncate">
+                {user?.primaryEmailAddress?.emailAddress || 'Authenticated'}
+              </span>
+            </div>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: 'h-8 w-8 ring-2 ring-orange-500/50 rounded-full',
+                  userButtonPopoverCard: 'bg-slate-900 border border-slate-800 text-white shadow-2xl',
+                },
+              }}
+            />
+          </div>
+        </SignedIn>
+
+        <SignedOut>
+          <div className="flex items-center gap-2">
+            <SignInButton mode="modal">
+              <Button size="sm" className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm transition">
+                Sign In
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button size="sm" variant="outline" className="h-8 px-3 text-xs border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                Sign Up
+              </Button>
+            </SignUpButton>
+          </div>
+        </SignedOut>
+      </ClerkLoaded>
+    </>
   );
 };

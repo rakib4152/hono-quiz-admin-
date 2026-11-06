@@ -15,11 +15,11 @@ import { AppEnv } from './env.js';
 import { createHealthHandler } from './routes/health.js';
 import { handlePocCheck } from './routes/poc.js';
 
-import quizApp, { quizService } from '@quiz-service';
+import quizApp from '@quiz-service';
 import { attemptService } from '@attempt-service';
 import { paymentService } from '@payment-service';
 import { analyticsService } from '@analytics-service';
-import { authService } from '@auth-service';
+import { authApp } from '@auth-service';
 
 import {
   createDrizzleClient,
@@ -43,8 +43,8 @@ const startupTime = Date.now();
  */
 export const app = new Hono<{ Bindings: AppEnv['Bindings'] }>();
 
-// Global CORS middleware
-app.use('/api/*', (c, next) => {
+// Global CORS middleware for API and auth routes
+app.use('*', (c, next) => {
   const rawOrigins = c.env?.CORS_ALLOWED_ORIGINS || 'http://localhost:3000';
   const allowedOrigins = typeof rawOrigins === 'string'
     ? rawOrigins.split(',').map((o) => o.trim()).filter(Boolean)
@@ -64,6 +64,8 @@ app.use('/api/*', (c, next) => {
     allowHeaders: [
       'Content-Type',
       'Authorization',
+      'X-Clerk-User-Id',
+      'X-Correlation-ID',
       'X-Requested-With',
       'X-Request-ID',
       'X-User-Role',
@@ -75,9 +77,10 @@ app.use('/api/*', (c, next) => {
   })(c, next);
 });
 
-// Mount microservices under /api/v1
+// Mount native Hono microservices under /api/v1 (and /auth/* at root)
 app.route('/api/v1', quizApp);
-// Temporarily disabled for debugging
+app.route('/api/v1', authApp);
+app.route('/', authApp);
 
 // Health & info endpoints (at root level, not under /api/v1)
 app.get('/health', (c) => {
@@ -192,35 +195,6 @@ const getAuthContext = (c: any) => {
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
   return { token, clerkUserId, correlationId };
 };
-
-// Clerk Authentication Microservice Handler
-app.all('/api/v1/auth/*', async (c) => {
-  const { token, clerkUserId, correlationId } = getAuthContext(c);
-  const res = await authService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    token,
-    clerkUserId,
-    correlationId,
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/devices/*', async (c) => {
-  const { token, clerkUserId, correlationId } = getAuthContext(c);
-  const res = await authService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    token,
-    clerkUserId,
-    correlationId,
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
 
 app.all('/api/v1/attempts/*', async (c) => {
   const { token, clerkUserId, correlationId } = getAuthContext(c);
