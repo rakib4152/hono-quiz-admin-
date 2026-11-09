@@ -606,17 +606,25 @@ authApp.post('/auth/clerk-sync', handleClerkSyncRequest);
 authApp.post('/auth/clerk-sync/', handleClerkSyncRequest);
 authApp.post('/auth/sync', handleClerkSyncRequest);
 authApp.post('/auth/sync/', handleClerkSyncRequest);
+authApp.post('/auth/register', handleClerkSyncRequest);
+authApp.post('/auth/register/', handleClerkSyncRequest);
+authApp.post('/auth/signup', handleClerkSyncRequest);
+authApp.post('/auth/signup/', handleClerkSyncRequest);
 
 const handleClerkSyncGetProbe = (c: any) => {
   return c.json(
     {
       success: true,
-      endpoint: '/api/v1/auth/clerk-sync',
+      endpoints: [
+        '/api/v1/auth/clerk-sync',
+        '/api/v1/auth/register',
+        '/api/v1/auth/sync',
+      ],
       method: 'POST',
       authProvider: 'Clerk',
       clerkAppId: 'app_3LavFW7A5cCB70BWweaphvP77wn',
       message:
-        'Clerk user sync endpoint is active. Send a POST request with JSON body { clerkUserId, email, name } to create or update a user in Hostinger MySQL.',
+        'Clerk user sync / registration endpoint is active. Send a POST request with JSON body { clerkUserId, email, name } to create or update a user in Hostinger MySQL.',
     },
     200
   );
@@ -624,6 +632,8 @@ const handleClerkSyncGetProbe = (c: any) => {
 
 authApp.get('/auth/clerk-sync', handleClerkSyncGetProbe);
 authApp.get('/auth/clerk-sync/', handleClerkSyncGetProbe);
+authApp.get('/auth/register', handleClerkSyncGetProbe);
+authApp.get('/auth/register/', handleClerkSyncGetProbe);
 
 authApp.post('/internal/verify-token', async (c) => {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
@@ -744,8 +754,13 @@ export const authService = {
       return clerkAuthStore.users.get(effectiveId) || null;
     };
 
-    // POST /auth/clerk-sync - Synchronize Clerk Profile with Hostinger MySQL
-    if (path === '/auth/clerk-sync' || path === '/auth/sync') {
+    // POST /auth/clerk-sync (or /auth/register, /auth/sync) - Synchronize Clerk Profile with Hostinger MySQL
+    if (
+      path === '/auth/clerk-sync' ||
+      path === '/auth/sync' ||
+      path === '/auth/register' ||
+      path === '/auth/signup'
+    ) {
       return executeClerkSync({
         rawBody: body,
         token,

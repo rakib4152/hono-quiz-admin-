@@ -122,7 +122,10 @@ const ClerkSessionBridge: React.FC = () => {
 export const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const rawKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
+  const rawKey = (
+    (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined) ||
+    (import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string | undefined)
+  );
   const validKey = isValidClerkPublishableKey(rawKey) ? rawKey.trim() : null;
 
   if (!validKey) {
