@@ -9,18 +9,26 @@ export function createHealthHandler(env: AppEnv['Bindings'], startupTime: number
   const uptimeSeconds = Math.floor((Date.now() - startupTime) / 1000);
 
   return {
-    status: 'healthy',
+    ok: true,
+    status: 'ok',
     timestamp: new Date().toISOString(),
     uptimeSeconds,
     service: 'quiz-platform-api',
-    runtime: 'Cloudflare Workers (Edge)',
+    runtime: env?.HYPERDRIVE ? 'Cloudflare Workers (Edge)' : 'Node.js (@hono/node-server)',
     bindings: {
       hyperdrive: !!env?.HYPERDRIVE,
       kvCache: !!env?.CACHE_KV,
       r2Assets: !!env?.ASSETS_R2,
-      databaseUrlConfigured: !!(env?.DATABASE_URL || env?.QUIZ_DATABASE_URL),
+      databaseUrlConfigured: !!(
+        env?.DATABASE_URL ||
+        env?.QUIZ_DATABASE_URL ||
+        (typeof process !== 'undefined' && process.env?.DATABASE_URL)
+      ),
     },
     version: env?.API_VERSION || 'v1',
-    environment: env?.ENVIRONMENT || 'development',
+    environment:
+      env?.ENVIRONMENT ||
+      (typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined) ||
+      'development',
   };
 }
