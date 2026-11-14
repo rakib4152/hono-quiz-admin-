@@ -8,10 +8,11 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "tsx src/server.ts",
-    "dev:frontend": "vite --port=3002 --host=0.0.0.0",
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:api": "tsx src/server.ts",
     "build:client": "vite build",
     "build": "esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
+    "postinstall": "esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
     "start": "node dist/server.js",
     "preview": "vite preview",
     "clean": "rm -rf dist",

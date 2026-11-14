@@ -29,6 +29,23 @@ async function createDrizzleFromEnv(env: Bindings): Promise<DrizzleDB> {
   return createDrizzleClient(env);
 }
 
+async function cleanupDbConnection(db: DrizzleDB, c: any): Promise<void> {
+  const cleanup = endDrizzleConnection(db).catch((err) => {
+    console.error('[Drizzle Cleanup Error]:', err);
+  });
+  let ctx: { waitUntil?: (p: Promise<any>) => void } | undefined;
+  try {
+    ctx = c.executionCtx;
+  } catch {
+    ctx = undefined;
+  }
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(cleanup);
+  } else {
+    await cleanup;
+  }
+}
+
 /**
  * Requires ADMIN or SUPER_ADMIN role for mutating endpoints
  */
@@ -71,7 +88,7 @@ app.get('/db-health', async (c) => {
       error: error?.message || 'Database ping failed',
     }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -100,7 +117,7 @@ app.get('/categories', async (c) => {
     console.error('[Drizzle Error] GET /categories query failed:', error);
     return c.json({ success: false, error: error.message || 'Failed to fetch categories' }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -121,7 +138,7 @@ app.get('/categories/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -156,7 +173,7 @@ app.post('/categories', async (c) => {
     const isDuplicate = error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062;
     return c.json({ success: false, error: isDuplicate ? 'Category slug already exists' : error.message }, isDuplicate ? 409 : 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -183,7 +200,7 @@ app.put('/categories/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -202,7 +219,7 @@ app.delete('/categories/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -230,7 +247,7 @@ app.get('/exams', async (c) => {
     console.error('[Drizzle Error] GET /exams query failed:', error);
     return c.json({ success: false, error: error.message || 'Failed to fetch exams' }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -251,7 +268,7 @@ app.get('/exams/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -287,7 +304,7 @@ app.post('/exams', async (c) => {
     console.error('[Drizzle Error] POST /exams failed:', error);
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -306,7 +323,7 @@ app.delete('/exams/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -326,7 +343,7 @@ app.get('/subjects', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -352,7 +369,7 @@ app.post('/subjects', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -375,7 +392,7 @@ app.get('/topics', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -401,7 +418,7 @@ app.post('/topics', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -436,7 +453,7 @@ app.get('/quizzes', async (c) => {
     console.error('[Drizzle Error] GET /quizzes query failed:', error);
     return c.json({ success: false, error: error.message || 'Failed to fetch quizzes' }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -504,7 +521,7 @@ app.get('/quizzes/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -561,7 +578,7 @@ app.post('/quizzes', async (c) => {
     console.error('[Drizzle Error] POST /quizzes failed:', error);
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -594,7 +611,7 @@ app.put('/quizzes/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -614,7 +631,7 @@ app.delete('/quizzes/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -644,7 +661,7 @@ app.post('/quizzes/:id/questions', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -691,7 +708,7 @@ app.get('/quizzes/:id/offline-package', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -725,7 +742,7 @@ app.get('/questions', async (c) => {
     console.error('[Drizzle Error] GET /questions failed:', error);
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -801,7 +818,7 @@ app.post('/questions', async (c) => {
     console.error('[Drizzle Error] POST /questions failed:', error);
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -822,7 +839,7 @@ app.delete('/questions/:id', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
@@ -867,7 +884,7 @@ app.post('/internal/quiz-scoring-keys', async (c) => {
     console.error('[Drizzle Error] POST /internal/quiz-scoring-keys failed:', error);
     return c.json({ success: false, error: error.message || 'Failed to fetch quiz keys' }, 500);
   } finally {
-    c.executionCtx.waitUntil(endDrizzleConnection(db));
+    await cleanupDbConnection(db, c);
   }
 });
 
