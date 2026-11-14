@@ -56,7 +56,6 @@
     "apps",
     "services",
     "packages",
-    "server.ts",
     "vite.config.ts"
   ],
   "exclude": [
