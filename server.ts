@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
@@ -139,9 +140,18 @@ async function startServer() {
     expressApp.use(vite.middlewares);
   } else {
     const distDir = path.resolve(__dirname, 'dist');
+    const indexHtmlPath = path.join(distDir, 'index.html');
     expressApp.use(express.static(distDir, { index: false }));
     expressApp.get('*', (_req, res) => {
-      res.sendFile(path.join(distDir, 'index.html'));
+      if (fs.existsSync(indexHtmlPath)) {
+        res.sendFile(indexHtmlPath);
+        return;
+      }
+      res.status(200).json({
+        ok: true,
+        service: 'hono-quiz-admin',
+        message: 'API server running. Run `pnpm run build` to serve frontend assets.',
+      });
     });
   }
 

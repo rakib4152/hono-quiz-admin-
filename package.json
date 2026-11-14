@@ -3,16 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "server.ts",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "tsx server.ts",
     "dev:frontend": "vite --port=3002 --host=0.0.0.0",
     "dev:api": "wrangler dev --port 8787",
     "dev:api:apps": "wrangler dev --config apps/wrangler.jsonc --port 8787",
     "dev:all": "concurrently -k -n \"FE,API\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:api\"",
-    "build": "vite build",
+    "build:client": "vite build",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js && cp dist/index.js index.js && cp dist/index.js server.js && cp dist/index.js app.js && cp dist/index.js dist/server.js",
+    "postinstall": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js && cp dist/index.js index.js && cp dist/index.js server.js && cp dist/index.js app.js && cp dist/index.js dist/server.js",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js && cp dist/index.js index.js && cp dist/index.js server.js && cp dist/index.js app.js && cp dist/index.js dist/server.js",
     "start": "node server.ts",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist server.js index.js app.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
