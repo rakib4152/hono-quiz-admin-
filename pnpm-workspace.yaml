@@ -6,4 +6,3 @@ allowBuilds:
   esbuild: true
   prisma: true
   protobufjs: true
-  workerd: true

@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { app as honoApp } from './apps/src/index.ts';
 
 dotenv.config({ quiet: true } as any);
 
@@ -28,7 +29,7 @@ const workerEnv = {
   DATABASE_URL: defaultConnectionString,
   CORS_ALLOWED_ORIGINS:
     process.env.CORS_ALLOWED_ORIGINS ||
-    'https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000,http://localhost:3002,http://localhost:5173',
+    'https://jobexambd.com,https://www.jobexambd.com,https://api.jobexambd.com,http://localhost:3000,http://localhost:3002,http://localhost:5173',
   HYPERDRIVE: {
     connectionString: defaultConnectionString,
   },
@@ -55,11 +56,6 @@ const API_ROUTE_PREFIXES = [
 ];
 
 async function startServer() {
-  const { register } = await import('tsx/esm/api');
-  register();
-
-  const { app: honoApp } = await import('./apps/src/index.js');
-
   const expressApp = express();
   expressApp.disable('x-powered-by');
 
@@ -128,20 +124,38 @@ async function startServer() {
     }
   );
 
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: process.env.DISABLE_HMR !== 'true',
-      },
-      appType: 'spa',
-    });
-    expressApp.use(vite.middlewares);
-  } else {
-    const distDir = path.resolve(__dirname, 'dist');
-    const indexHtmlPath = path.join(distDir, 'index.html');
-    expressApp.use(express.static(distDir, { index: false }));
+  // Resolve dist/public whether running from root (server.ts) or compiled bundle (dist/server.js)
+  const distPublicDir =
+    path.basename(__dirname) === 'dist'
+      ? path.resolve(__dirname, 'public')
+      : path.resolve(__dirname, 'dist', 'public');
+  const indexHtmlPath = path.join(distPublicDir, 'index.html');
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  let usingViteDevMiddleware = false;
+
+  if (!isProduction) {
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: {
+          middlewareMode: true,
+          hmr: process.env.DISABLE_HMR !== 'true',
+        },
+        appType: 'spa',
+      });
+      expressApp.use(vite.middlewares);
+      usingViteDevMiddleware = true;
+    } catch (err) {
+      if (!fs.existsSync(indexHtmlPath)) {
+        throw err;
+      }
+      console.warn('[Server] Vite dev dependency unavailable; serving static dist/public.');
+    }
+  }
+
+  if (!usingViteDevMiddleware) {
+    expressApp.use(express.static(distPublicDir, { index: false }));
     expressApp.get('*', (_req, res) => {
       if (fs.existsSync(indexHtmlPath)) {
         res.sendFile(indexHtmlPath);
@@ -150,7 +164,7 @@ async function startServer() {
       res.status(200).json({
         ok: true,
         service: 'hono-quiz-admin',
-        message: 'API server running. Run `pnpm run build` to serve frontend assets.',
+        message: 'API server running. Run `pnpm run build` to build dist/public.',
       });
     });
   }
