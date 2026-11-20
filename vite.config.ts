@@ -36,16 +36,16 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@quiz/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
-        '@packages/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
-        '@repo/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
-        '@quiz-service': path.resolve(__dirname, 'services/quiz-service/src/index.ts'),
-        '@attempt-service': path.resolve(__dirname, 'services/attempt-service/src/index.ts'),
-        '@payment-service': path.resolve(__dirname, 'services/payment-service/src/index.ts'),
-        '@analytics-service': path.resolve(__dirname, 'services/analytics-service/src/index.ts'),
-        '@auth-service': path.resolve(__dirname, 'services/auth-service/src/index.ts'),
-        '@shared-types': path.resolve(__dirname, 'packages/shared-types/src/index.ts'),
-        '@': path.resolve(__dirname, '.'),
+        '@quiz/database': path.resolve(import.meta.dirname, 'packages/database/src/index.ts'),
+        '@packages/database': path.resolve(import.meta.dirname, 'packages/database/src/index.ts'),
+        '@repo/database': path.resolve(import.meta.dirname, 'packages/database/src/index.ts'),
+        '@quiz-service': path.resolve(import.meta.dirname, 'services/quiz-service/src/index.ts'),
+        '@attempt-service': path.resolve(import.meta.dirname, 'services/attempt-service/src/index.ts'),
+        '@payment-service': path.resolve(import.meta.dirname, 'services/payment-service/src/index.ts'),
+        '@analytics-service': path.resolve(import.meta.dirname, 'services/analytics-service/src/index.ts'),
+        '@auth-service': path.resolve(import.meta.dirname, 'services/auth-service/src/index.ts'),
+        '@shared-types': path.resolve(import.meta.dirname, 'packages/shared-types/src/index.ts'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     build: {
@@ -53,6 +53,9 @@ export default defineConfig(() => {
       emptyOutDir: true,
     },
     server: {
+      port: 3000,
+      host: '0.0.0.0',
+      allowedHosts: true,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
