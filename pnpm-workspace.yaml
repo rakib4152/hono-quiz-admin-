@@ -1,6 +1,15 @@
+packages:
+  - '.'
 allowBuilds:
   '@clerk/shared': true
   '@google/genai': true
+<<<<<<< HEAD
   esbuild: true
+=======
+  '@prisma/client': false
+  '@prisma/engines': false
+  esbuild: true
+  prisma: false
+>>>>>>> 0c2cac577d6178ffb4a4e77c0bb3d1cfd19eae4e
   protobufjs: true
   workerd: true
