@@ -764,7 +764,8 @@ function resolveDefaultApiBaseUrl(): string {
       hostname === 'jobexambd.com' ||
       hostname === 'www.jobexambd.com' ||
       hostname === 'admin.jobexambd.com' ||
-      hostname.endsWith('.pages.dev');
+      hostname.endsWith('.pages.dev') ||
+      hostname.endsWith('.hostingersite.com');
     const pointsToLocalWrangler = /^https?:\/\/(localhost|127\.0\.0\.1):8787(\/api\/v1)?\/?$/i.test(
       rawEnv
     );

@@ -14,7 +14,7 @@
     "build:server": "esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
     "build": "vite build && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
     "deploy:cf": "vite build && wrangler deploy",
-    "postinstall": "esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
+    "postinstall": "vite build && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
     "start": "node dist/server.js",
     "preview": "vite preview",
     "clean": "rm -rf dist",

@@ -78,7 +78,7 @@ app.use('*', (c, next) => {
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
         return origin;
       }
-      if (/^https:\/\/[a-z0-9-]+\.(asia-east1\.run\.app|pages\.dev)$/.test(origin)) {
+      if (/^https:\/\/[a-z0-9-]+\.(asia-east1\.run\.app|pages\.dev|hostingersite\.com)$/.test(origin)) {
         return origin;
       }
       return null;
