@@ -32,6 +32,10 @@ export interface AppEnv {
     CACHE_KV?: KVNamespaceLike;
     // R2 Bucket for quiz assets, question media, and exports
     ASSETS_R2?: R2BucketLike;
+    // Cloudflare Workers Static Assets binding (single-domain frontend serving)
+    ASSETS?: {
+      fetch(request: Request | string): Promise<Response>;
+    };
     // Direct MySQL connection URL fallback
     DATABASE_URL?: string;
     QUIZ_DATABASE_URL?: string;

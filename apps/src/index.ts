@@ -65,7 +65,7 @@ async function cleanupDb(db: DrizzleDB, c: any): Promise<void> {
 app.use('*', (c, next) => {
   const rawOrigins =
     c.env?.CORS_ALLOWED_ORIGINS ||
-    'https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000';
+    'https://jobexambd.com,https://www.jobexambd.com,https://admin.jobexambd.com,https://api.jobexambd.com,http://localhost:3000';
   const allowedOrigins = typeof rawOrigins === 'string'
     ? rawOrigins.split(',').map((o) => o.trim()).filter(Boolean)
     : [rawOrigins];
@@ -78,7 +78,7 @@ app.use('*', (c, next) => {
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
         return origin;
       }
-      if (/^https:\/\/[a-z0-9-]+\.asia-east1\.run\.app$/.test(origin)) {
+      if (/^https:\/\/[a-z0-9-]+\.(asia-east1\.run\.app|pages\.dev)$/.test(origin)) {
         return origin;
       }
       return null;
@@ -144,29 +144,39 @@ const handleRawDbCheck = async (c: any) => {
 app.get('/health/db', handleRawDbCheck);
 app.get('/api/v1/health/db', handleRawDbCheck);
 
-app.get('/', (c) => {
-  return c.json({
-    service: 'Scalable Quiz Platform Production API',
-    domain: 'api.jobexambd.com',
-    version: c.env?.API_VERSION || 'v1',
-    runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Drizzle)',
-    docs: '/api/v1/openapi.json',
-    health: '/api/v1/health',
-    dbHealth: '/api/v1/db-health',
-    authSync: '/api/v1/auth/clerk-sync',
-    bindings: {
-      kv: !!c.env?.CACHE_KV,
-      hyperdrive: !!c.env?.HYPERDRIVE,
-      r2: !!c.env?.ASSETS_R2,
-    },
-    services: [
-      'auth (/api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices/register)',
-      'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/quizzes)',
-      'attempts (/api/v1/quizzes/:id/start, /api/v1/attempts)',
-      'payments (/api/v1/orders, /api/v1/payments)',
-      'analytics (/api/v1/leaderboards, /api/v1/badges)',
-    ],
-  });
+const buildApiMetadata = (c: any) => ({
+  service: 'Scalable Quiz Platform Production API',
+  domain: 'api.jobexambd.com',
+  version: c.env?.API_VERSION || 'v1',
+  runtime: 'Cloudflare Workers (Hono) + Hostinger MySQL 8.0 (Drizzle)',
+  docs: '/api/v1/openapi.json',
+  health: '/api/v1/health',
+  dbHealth: '/api/v1/db-health',
+  authSync: '/api/v1/auth/clerk-sync',
+  bindings: {
+    kv: !!c.env?.CACHE_KV,
+    hyperdrive: !!c.env?.HYPERDRIVE,
+    r2: !!c.env?.ASSETS_R2,
+    assets: !!c.env?.ASSETS,
+  },
+  services: [
+    'auth (/api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices/register)',
+    'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/quizzes)',
+    'attempts (/api/v1/quizzes/:id/start, /api/v1/attempts)',
+    'payments (/api/v1/orders, /api/v1/payments)',
+    'analytics (/api/v1/leaderboards, /api/v1/badges)',
+  ],
+});
+
+app.get('/api/v1', (c) => {
+  return c.json(buildApiMetadata(c));
+});
+
+app.get('/', async (c) => {
+  if (c.env?.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+  return c.json(buildApiMetadata(c));
 });
 
 // Database PoC & Connectivity Probes
@@ -388,8 +398,21 @@ app.all('/api/v1/badges/*', async (c) => {
   return c.json(res.data, res.status as any);
 });
 
-// 404 handler
-app.notFound((c) => {
+// 404 handler (falls back to static SPA index.html for non-API GET requests when ASSETS is bound)
+app.notFound(async (c) => {
+  const isApiPath =
+    c.req.path.startsWith('/api/') ||
+    c.req.path === '/api' ||
+    c.req.path.startsWith('/auth/') ||
+    c.req.path.startsWith('/health') ||
+    c.req.path.startsWith('/db-health') ||
+    c.req.path.startsWith('/poc/') ||
+    c.req.path.startsWith('/internal/');
+
+  if (!isApiPath && c.req.method === 'GET' && c.env?.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+
   return c.json({ error: 'Endpoint Not Found', path: c.req.path, method: c.req.method }, 404);
 });
 

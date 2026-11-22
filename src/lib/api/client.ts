@@ -758,14 +758,19 @@ function resolveDefaultApiBaseUrl(): string {
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL?.trim()) || '';
 
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
+    const hostname = window.location.hostname.toLowerCase();
     const isRemoteBrowser = hostname !== 'localhost' && hostname !== '127.0.0.1';
+    const isSeparatedProdFrontend =
+      hostname === 'jobexambd.com' ||
+      hostname === 'www.jobexambd.com' ||
+      hostname === 'admin.jobexambd.com' ||
+      hostname.endsWith('.pages.dev');
     const pointsToLocalWrangler = /^https?:\/\/(localhost|127\.0\.0\.1):8787(\/api\/v1)?\/?$/i.test(
       rawEnv
     );
 
     if (!rawEnv || pointsToLocalWrangler || (isRemoteBrowser && /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(rawEnv))) {
-      return '/api/v1';
+      return isSeparatedProdFrontend ? 'https://api.jobexambd.com/api/v1' : '/api/v1';
     }
   }
 

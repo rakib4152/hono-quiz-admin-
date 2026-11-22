@@ -9,6 +9,21 @@
 	"observability": {
 		"enabled": true
 	},
+	"assets": {
+		"directory": "./dist/public",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*",
+			"/auth/*",
+			"/health",
+			"/health/*",
+			"/db-health",
+			"/poc/*",
+			"/devices/*",
+			"/internal/*"
+		]
+	},
 	"hyperdrive": [
 		{
 			"binding": "HYPERDRIVE",
@@ -35,6 +50,6 @@
 	"vars": {
 		"ENVIRONMENT": "production",
 		"API_VERSION": "v1",
-		"CORS_ALLOWED_ORIGINS": "https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000,http://localhost:3002,http://localhost:5173"
+		"CORS_ALLOWED_ORIGINS": "https://api.jobexambd.com,https://admin.jobexambd.com,https://jobexambd.com,https://www.jobexambd.com,http://localhost:3000,http://localhost:3002,http://localhost:5173"
 	}
 }
