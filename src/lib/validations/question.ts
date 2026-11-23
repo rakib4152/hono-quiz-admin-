@@ -15,8 +15,18 @@ export const QuestionFormSchema = z.object({
   categoryId: z.string().min(1, 'Please select a Category'),
   examId: z.string().min(1, 'Please select an Exam'),
   subjectId: z.string().min(1, 'Please select a Subject'),
-  topicId: z.string().min(1, 'Please select a Topic'),
-  chapterId: z.string().min(1, 'Please select a Chapter'),
+  topicId: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
+  chapterId: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
   positiveMarks: z.coerce.number().positive('Positive marks must be greater than 0'),
   negativeMarks: z.coerce.number().min(0, 'Negative marks cannot be negative'),

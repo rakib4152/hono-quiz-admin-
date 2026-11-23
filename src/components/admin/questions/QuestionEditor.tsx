@@ -51,8 +51,8 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     categoryId: initialData?.categoryId || 'cat-1',
     examId: initialData?.examId || 'exam-1',
     subjectId: initialData?.subjectId || 'sub-1',
-    topicId: initialData?.topicId || 'top-1',
-    chapterId: initialData?.chapterId || 'chap-1',
+    topicId: initialData?.topicId ?? '',
+    chapterId: initialData?.chapterId ?? '',
     difficulty: initialData?.difficulty || 'MEDIUM',
     positiveMarks: initialData?.positiveMarks || 1.0,
     negativeMarks: initialData?.negativeMarks || 0.25,
@@ -117,8 +117,8 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     setValue('categoryId', 'cat-1');
     setValue('examId', 'exam-1');
     setValue('subjectId', 'sub-1');
-    setValue('topicId', 'top-1');
-    setValue('chapterId', 'chap-1');
+    setValue('topicId', '');
+    setValue('chapterId', '');
     setValue('difficulty', 'MEDIUM');
     setValue('positiveMarks', 1.0);
     setValue('negativeMarks', 0.25);
@@ -161,11 +161,12 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       categoryId: formData.categoryId,
       examId: formData.examId,
       subjectId: formData.subjectId,
-      topicId: formData.topicId,
-      chapterId: formData.chapterId,
+      topicId: formData.topicId || null,
+      chapterId: formData.chapterId || null,
       categoryName: 'Job Preparation',
       subjectName: 'Mathematics',
-      topicName: 'Algebra',
+      topicName: formData.topicId ? (initialData?.topicName || formData.topicId) : null,
+      chapterName: formData.chapterId ? (initialData?.chapterName || formData.chapterId) : null,
       difficulty: formData.difficulty,
       positiveMarks: formData.positiveMarks,
       negativeMarks: formData.negativeMarks,
@@ -303,7 +304,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mt-4 pt-4 border-t border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-7 gap-4 mt-4 pt-4 border-t border-slate-800">
               <div>
                 <Label htmlFor="categoryId">Category</Label>
                 <select
@@ -337,6 +338,32 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <option value="sub-1">Mathematics (গণিত)</option>
                   <option value="sub-2">Bangla Literature (বাংলা)</option>
                   <option value="sub-3">General Science (বিজ্ঞান)</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="topicId">Topic (Optional)</Label>
+                <select
+                  id="topicId"
+                  {...register('topicId')}
+                  className="mt-1 w-full h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
+                >
+                  <option value="">None (Optional)</option>
+                  <option value="top-1">Algebra & Equations</option>
+                  <option value="top-2">Ancient Period</option>
+                  <option value="top-3">Cell Biology</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="chapterId">Chapter (Optional)</Label>
+                <select
+                  id="chapterId"
+                  {...register('chapterId')}
+                  className="mt-1 w-full h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
+                >
+                  <option value="">None (Optional)</option>
+                  <option value="chap-1">Quadratic Equations</option>
+                  <option value="chap-2">Charyapada & Medieval</option>
+                  <option value="chap-3">Cell Organelles</option>
                 </select>
               </div>
               <div>

@@ -4,6 +4,7 @@ import {
   exams,
   subjects,
   topics,
+  chapters,
   quizzes,
   questions,
   options,
@@ -411,7 +412,7 @@ app.get('/topics', async (c) => {
 
     const data = allTopics.map((t) => ({
       ...t,
-      subjectName: subMap.get(t.subjectId) || null,
+      subjectName: t.subjectId ? subMap.get(t.subjectId) || null : null,
     }));
     return c.json({ success: true, count: data.length, data }, 200);
   } catch (error: any) {
@@ -423,7 +424,7 @@ app.get('/topics', async (c) => {
 
 /**
  * POST /topics
- * Create a new topic under a subject
+ * Create a new topic (subjectId is optional/nullable)
  */
 app.post('/topics', async (c) => {
   const admin = await requireAdmin(c);
@@ -432,14 +433,185 @@ app.post('/topics', async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
     const { subjectId, name, slug } = body || {};
-    if (!subjectId || !name) return c.json({ success: false, error: 'subjectId and name are required' }, 400);
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return c.json({ success: false, error: 'Topic name is required' }, 400);
+    }
 
-    const topicSlug = slug?.trim() || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+    const topicSlug = slug?.trim() || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const newId = body.id || generateId('top');
+    const normalizedSubjectId = typeof subjectId === 'string' && subjectId.trim() ? subjectId.trim() : null;
 
-    await db.insert(topics).values({ id: newId, subjectId, name: name.trim(), slug: topicSlug });
+    await db.insert(topics).values({ id: newId, subjectId: normalizedSubjectId, name: name.trim(), slug: topicSlug });
     const [created] = await db.select().from(topics).where(eq(topics.id, newId)).limit(1);
     return c.json({ success: true, data: created }, 201);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * PUT /topics/:id
+ * Update a topic (subjectId can be set to null)
+ */
+app.put('/topics/:id', async (c) => {
+  const admin = await requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const db = await createDrizzleFromEnv(c.env);
+  const topicId = c.req.param('id');
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const updateData: any = {};
+    if (body.name) updateData.name = String(body.name).trim();
+    if (body.slug) updateData.slug = String(body.slug).trim();
+    if (body.subjectId !== undefined) {
+      updateData.subjectId =
+        typeof body.subjectId === 'string' && body.subjectId.trim() ? body.subjectId.trim() : null;
+    }
+    if (Object.keys(updateData).length > 0) {
+      await db.update(topics).set(updateData).where(eq(topics.id, topicId));
+    }
+    const [updated] = await db.select().from(topics).where(eq(topics.id, topicId)).limit(1);
+    if (!updated) return c.json({ success: false, error: 'Topic not found' }, 404);
+    return c.json({ success: true, data: updated }, 200);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * DELETE /topics/:id
+ * Delete a topic
+ */
+app.delete('/topics/:id', async (c) => {
+  const admin = await requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const db = await createDrizzleFromEnv(c.env);
+  const topicId = c.req.param('id');
+  try {
+    await db.delete(topics).where(eq(topics.id, topicId));
+    return c.json({ success: true, deletedId: topicId }, 200);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * GET /chapters
+ * List all chapters (topicId and subjectId are optional/nullable)
+ */
+app.get('/chapters', async (c) => {
+  const db = await createDrizzleFromEnv(c.env);
+  try {
+    const allChapters = await db.select().from(chapters).orderBy(asc(chapters.name));
+    const allTopics = await db.select().from(topics);
+    const allSubjects = await db.select().from(subjects);
+    const topMap = new Map(allTopics.map((t) => [t.id, t]));
+    const subMap = new Map(allSubjects.map((s) => [s.id, s.name]));
+
+    const data = allChapters.map((ch) => {
+      const parentTopic = ch.topicId ? topMap.get(ch.topicId) : null;
+      const resolvedSubjectId = ch.subjectId || parentTopic?.subjectId || null;
+      return {
+        ...ch,
+        topicName: parentTopic?.name || null,
+        subjectName: resolvedSubjectId ? subMap.get(resolvedSubjectId) || null : null,
+      };
+    });
+    return c.json({ success: true, count: data.length, data }, 200);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * POST /chapters
+ * Create a new chapter (topicId and subjectId are optional/nullable)
+ */
+app.post('/chapters', async (c) => {
+  const admin = await requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const db = await createDrizzleFromEnv(c.env);
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { topicId, subjectId, name, slug } = body || {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return c.json({ success: false, error: 'Chapter name is required' }, 400);
+    }
+
+    const chapterSlug = slug?.trim() || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const newId = body.id || generateId('chap');
+    const normalizedTopicId = typeof topicId === 'string' && topicId.trim() ? topicId.trim() : null;
+    const normalizedSubjectId = typeof subjectId === 'string' && subjectId.trim() ? subjectId.trim() : null;
+
+    await db.insert(chapters).values({
+      id: newId,
+      topicId: normalizedTopicId,
+      subjectId: normalizedSubjectId,
+      name: name.trim(),
+      slug: chapterSlug,
+    });
+    const [created] = await db.select().from(chapters).where(eq(chapters.id, newId)).limit(1);
+    return c.json({ success: true, data: created }, 201);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * PUT /chapters/:id
+ * Update a chapter (topicId and subjectId can be set to null)
+ */
+app.put('/chapters/:id', async (c) => {
+  const admin = await requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const db = await createDrizzleFromEnv(c.env);
+  const chapterId = c.req.param('id');
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const updateData: any = {};
+    if (body.name) updateData.name = String(body.name).trim();
+    if (body.slug) updateData.slug = String(body.slug).trim();
+    if (body.topicId !== undefined) {
+      updateData.topicId = typeof body.topicId === 'string' && body.topicId.trim() ? body.topicId.trim() : null;
+    }
+    if (body.subjectId !== undefined) {
+      updateData.subjectId = typeof body.subjectId === 'string' && body.subjectId.trim() ? body.subjectId.trim() : null;
+    }
+    if (Object.keys(updateData).length > 0) {
+      await db.update(chapters).set(updateData).where(eq(chapters.id, chapterId));
+    }
+    const [updated] = await db.select().from(chapters).where(eq(chapters.id, chapterId)).limit(1);
+    if (!updated) return c.json({ success: false, error: 'Chapter not found' }, 404);
+    return c.json({ success: true, data: updated }, 200);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  } finally {
+    await cleanupDbConnection(db, c);
+  }
+});
+
+/**
+ * DELETE /chapters/:id
+ * Delete a chapter
+ */
+app.delete('/chapters/:id', async (c) => {
+  const admin = await requireAdmin(c);
+  if (admin instanceof Response) return admin;
+  const db = await createDrizzleFromEnv(c.env);
+  const chapterId = c.req.param('id');
+  try {
+    await db.delete(chapters).where(eq(chapters.id, chapterId));
+    return c.json({ success: true, deletedId: chapterId }, 200);
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   } finally {
@@ -563,6 +735,8 @@ app.post('/quizzes', async (c) => {
     const {
       examId,
       categoryId,
+      topicId,
+      chapterId,
       title,
       slug,
       description,
@@ -585,6 +759,8 @@ app.post('/quizzes', async (c) => {
       id: newId,
       examId,
       categoryId: categoryId || null,
+      topicId: typeof topicId === 'string' && topicId.trim() ? topicId.trim() : null,
+      chapterId: typeof chapterId === 'string' && chapterId.trim() ? chapterId.trim() : null,
       title: title.trim(),
       slug: quizSlug,
       description: description || null,
@@ -621,6 +797,12 @@ app.put('/quizzes/:id', async (c) => {
     const updateData: any = {};
     if (body.title) updateData.title = body.title.trim();
     if (body.description !== undefined) updateData.description = body.description;
+    if (body.topicId !== undefined) {
+      updateData.topicId = typeof body.topicId === 'string' && body.topicId.trim() ? body.topicId.trim() : null;
+    }
+    if (body.chapterId !== undefined) {
+      updateData.chapterId = typeof body.chapterId === 'string' && body.chapterId.trim() ? body.chapterId.trim() : null;
+    }
     if (body.status) {
       updateData.status = body.status;
       if (body.status === 'PUBLISHED') updateData.publishedAt = new Date();
@@ -784,6 +966,7 @@ app.post('/questions', async (c) => {
     const {
       subjectId,
       topicId,
+      chapterId,
       body: questionBody,
       explanation,
       difficulty = 1,
@@ -796,13 +979,16 @@ app.post('/questions', async (c) => {
     }
 
     const newQuestionId = body.id || generateId('q');
+    const normalizedTopicId = typeof topicId === 'string' && topicId.trim() ? topicId.trim() : null;
+    const normalizedChapterId = typeof chapterId === 'string' && chapterId.trim() ? chapterId.trim() : null;
 
     // Transaction: insert question and options atomically
     const result = await db.transaction(async (tx) => {
       await tx.insert(questions).values({
         id: newQuestionId,
         subjectId,
-        topicId: topicId || null,
+        topicId: normalizedTopicId,
+        chapterId: normalizedChapterId,
         body: questionBody,
         explanation: explanation || null,
         difficulty: Number(difficulty) || 1,

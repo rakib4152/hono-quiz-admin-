@@ -14,14 +14,40 @@ In accordance with strict microservices principles:
 | Microservice | Target Database | Models Owned | Cross-Service Identifiers Stored |
 | :--- | :--- | :--- | :--- |
 | **Auth Service** | `auth_db` | `users`, `sessions`, `devices` | None (Source of Identity) |
-| **Quiz Content Service** | `quiz_db` | `categories`, `exams`, `subjects`, `topics`, `quizzes`, `questions`, `options`, `quizQuestions` | None (Source of Content) |
+| **Quiz Content Service** | `quiz_db` | `categories`, `exams`, `subjects`, `topics`, `chapters`, `quizzes`, `questions`, `options`, `quizQuestions` | None (Source of Content) |
 | **Quiz Attempt Service** | `attempt_db` | `attempts`, `attemptAnswers`, `bookmarks`, `savedQuizzes` | `userId`, `quizId`, `questionId`, `selectedOptionId` |
 | **Payment Service** | `payment_db` | `orders`, `payments`, `quizAccess` | `userId`, `quizId` |
 | **Analytics Service** | `analytics_db` | `badges`, `userBadges`, `leaderboardEntries` | `userId`, `quizId` |
 
 ---
 
-## 3. Hostinger Shared Hosting Connection Limits & Mitigation
+## 3. Curriculum Hierarchy & Nullable Topics / Chapters
+
+The curriculum supports a flexible 5-tier hierarchy where **Topics** and **Chapters** are completely **optional (`NULL`-able)**:
+
+```text
+Category (required)
+  └── Exam (required)
+        └── Subject (required)
+              └── Topic (OPTIONAL / NULLABLE)
+                    └── Chapter (OPTIONAL / NULLABLE)
+```
+
+### Nullable Columns (`packages/database/src/schema.ts`)
+
+| Table | Column | Type | Nullability | Behavior |
+| :--- | :--- | :--- | :--- | :--- |
+| `topics` | `subject_id` | `varchar(30)` | **NULLABLE** | Allows standalone topics not bound to a specific subject. |
+| `chapters` | `topic_id` | `varchar(30)` | **NULLABLE** | Allows chapters directly under a subject or standalone without a parent topic. |
+| `chapters` | `subject_id` | `varchar(30)` | **NULLABLE** | Optional direct link to a subject when `topic_id` is `NULL`. |
+| `quizzes` | `topic_id` | `varchar(30)` | **NULLABLE** | Quizzes can target a whole exam/subject without assigning a topic. |
+| `quizzes` | `chapter_id` | `varchar(30)` | **NULLABLE** | Quizzes can omit chapter scoping (`null`). |
+| `questions` | `topic_id` | `varchar(30)` | **NULLABLE** | Questions only require `subject_id`; `topic_id` may be `NULL`. |
+| `questions` | `chapter_id` | `varchar(30)` | **NULLABLE** | Questions may omit chapter assignment (`NULL`). |
+
+---
+
+## 4. Hostinger Shared Hosting Connection Limits & Mitigation
 
 ### Constraints:
 1. **`max_user_connections`**: Typically 30 to 50 concurrent connections per cPanel/hPanel MySQL user.
@@ -30,7 +56,7 @@ In accordance with strict microservices principles:
 ### Microservices Mitigation Strategy:
 - **Cloudflare Hyperdrive Multiplexing**: Instead of 5,000 workers creating direct TCP handshakes, Cloudflare Hyperdrive maintains a small, warm connection pool (10-15 persistent connections).
 - **Short-Lived Transactions**: Answer saving and attempt submission queries are executed in isolated, indexed transactions (< 15ms duration) preventing row-lock contention.
-- **Read Caching**: Catalog data (Categories, Exams, Quiz structure) is cached at the edge or in Cloudflare KV with TTL invalidation on admin edits.
+- **Read Caching**: Catalog data (Categories, Exams, Subjects, Topics, Chapters, Quiz structure) is cached at the edge or in Cloudflare KV with TTL invalidation on admin edits.
 - **Drizzle Kit Migration Execution**:
   ```bash
   # Generate Drizzle migration SQL files

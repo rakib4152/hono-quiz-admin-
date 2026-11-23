@@ -137,8 +137,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
     if (targetType === 'exam' && categories.length > 0) setParentId(categories[0].id);
     else if (targetType === 'subject' && exams.length > 0) setParentId(exams[0].id);
-    else if (targetType === 'topic' && subjects.length > 0) setParentId(subjects[0].id);
-    else if (targetType === 'chapter' && topics.length > 0) setParentId(topics[0].id);
+    else if (targetType === 'topic') setParentId('');
+    else if (targetType === 'chapter') setParentId('');
     else setParentId('');
 
     setModalOpen(true);
@@ -283,12 +283,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         }
       }
     } else if (modalType === 'topic') {
-      const parentSubject = subjects.find((s) => s.id === parentId) || subjects[0];
+      const parentSubject = parentId ? subjects.find((s) => s.id === parentId) : undefined;
       if (modalMode === 'create') {
         const newTopic: TopicDTO = {
           id: `top-${Date.now()}`,
-          subjectId: parentSubject?.id || 'sub-1',
-          subjectName: parentSubject?.nameEn || 'General Subject',
+          subjectId: parentSubject?.id ?? null,
+          subjectName: parentSubject?.nameEn ?? null,
           nameEn: nameEn.trim(),
           nameBn: currentBn,
           code: codeOrSlug.trim() || `TOP-${Date.now().toString().slice(-4)}`,
@@ -304,8 +304,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         if (existing) {
           onUpdateTopic({
             ...existing,
-            subjectId: parentSubject?.id || existing.subjectId,
-            subjectName: parentSubject?.nameEn || existing.subjectName,
+            subjectId: parentSubject?.id ?? null,
+            subjectName: parentSubject?.nameEn ?? null,
             nameEn: nameEn.trim(),
             nameBn: currentBn,
             code: codeOrSlug.trim() || existing.code,
@@ -315,13 +315,14 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         }
       }
     } else if (modalType === 'chapter') {
-      const parentTopic = topics.find((t) => t.id === parentId) || topics[0];
+      const parentTopic = parentId ? topics.find((t) => t.id === parentId) : undefined;
       if (modalMode === 'create') {
         const newChap: ChapterDTO = {
           id: `chap-${Date.now()}`,
-          topicId: parentTopic?.id || 'top-1',
-          topicName: parentTopic?.nameEn || 'General Topic',
-          subjectName: parentTopic?.subjectName || 'General Subject',
+          topicId: parentTopic?.id ?? null,
+          topicName: parentTopic?.nameEn ?? null,
+          subjectId: parentTopic?.subjectId ?? null,
+          subjectName: parentTopic?.subjectName ?? null,
           nameEn: nameEn.trim(),
           nameBn: currentBn,
           code: codeOrSlug.trim() || `CHAP-${Date.now().toString().slice(-4)}`,
@@ -336,9 +337,10 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         if (existing) {
           onUpdateChapter({
             ...existing,
-            topicId: parentTopic?.id || existing.topicId,
-            topicName: parentTopic?.nameEn || existing.topicName,
-            subjectName: parentTopic?.subjectName || existing.subjectName,
+            topicId: parentTopic?.id ?? null,
+            topicName: parentTopic?.nameEn ?? null,
+            subjectId: parentTopic?.subjectId ?? null,
+            subjectName: parentTopic?.subjectName ?? null,
             nameEn: nameEn.trim(),
             nameBn: currentBn,
             code: codeOrSlug.trim() || existing.code,
@@ -688,9 +690,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     },
     {
       key: 'subjectName',
-      header: 'Parent Subject',
+      header: 'Parent Subject (Optional)',
       sortable: true,
-      render: (row) => <span className="text-xs text-slate-300 font-medium">{row.subjectName}</span>,
+      render: (row) => (
+        <span className={`text-xs font-medium ${row.subjectName ? 'text-slate-300' : 'text-slate-500 italic'}`}>
+          {row.subjectName || 'None (Standalone)'}
+        </span>
+      ),
     },
     {
       key: 'chaptersCount',
@@ -737,7 +743,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               setNameEn(row.nameEn);
               setNameBn(row.nameBn);
               setCodeOrSlug(row.code);
-              setParentId(row.subjectId);
+              setParentId(row.subjectId ?? '');
               setStatus(row.status);
               setModalOpen(true);
             }}
@@ -798,12 +804,14 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     },
     {
       key: 'topicName',
-      header: 'Topic & Subject',
+      header: 'Topic & Subject (Optional)',
       sortable: true,
       render: (row) => (
         <div className="space-y-0.5">
-          <div className="text-xs text-white font-medium">{row.topicName}</div>
-          <div className="text-[11px] text-slate-500">{row.subjectName}</div>
+          <div className={`text-xs font-medium ${row.topicName ? 'text-white' : 'text-slate-500 italic'}`}>
+            {row.topicName || 'None (Standalone)'}
+          </div>
+          <div className="text-[11px] text-slate-500">{row.subjectName || 'No Subject'}</div>
         </div>
       ),
     },
@@ -848,7 +856,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               setNameEn(row.nameEn);
               setNameBn(row.nameBn);
               setCodeOrSlug(row.code);
-              setParentId(row.topicId);
+              setParentId(row.topicId ?? '');
               setStatus(row.status);
               setModalOpen(true);
             }}
@@ -904,7 +912,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             Curriculum Catalog & Academic Hierarchy
           </h2>
           <p className="text-xs text-slate-400">
-            5-tier structure: Category → Exam → Subject → Topic → Chapter with full pagination, search & editing.
+            5-tier structure: Category → Exam → Subject → Topic (optional) → Chapter (optional) with full pagination, search & editing.
           </p>
         </div>
 
@@ -1137,8 +1145,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                         setModalType(t);
                         if (t === 'exam' && categories.length > 0) setParentId(categories[0].id);
                         if (t === 'subject' && exams.length > 0) setParentId(exams[0].id);
-                        if (t === 'topic' && subjects.length > 0) setParentId(subjects[0].id);
-                        if (t === 'chapter' && topics.length > 0) setParentId(topics[0].id);
+                        if (t === 'topic') setParentId('');
+                        if (t === 'chapter') setParentId('');
                       }}
                       className={`py-1 px-2 rounded text-[11px] capitalize font-medium transition ${
                         modalType === t
@@ -1190,12 +1198,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
             {modalType === 'topic' && (
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Parent Subject *</Label>
+                <Label className="text-xs text-slate-300">Parent Subject (Optional)</Label>
                 <select
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 outline-none focus:border-orange-500"
                 >
+                  <option value="">None (Standalone Topic)</option>
                   {subjects.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.nameEn} [{s.examName}]
@@ -1207,15 +1216,16 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
             {modalType === 'chapter' && (
               <div className="space-y-1.5">
-                <Label className="text-xs text-slate-300">Parent Topic *</Label>
+                <Label className="text-xs text-slate-300">Parent Topic (Optional)</Label>
                 <select
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 outline-none focus:border-orange-500"
                 >
+                  <option value="">None (Standalone Chapter)</option>
                   {topics.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.nameEn} [{t.subjectName}]
+                      {t.nameEn} [{t.subjectName || 'Standalone'}]
                     </option>
                   ))}
                 </select>

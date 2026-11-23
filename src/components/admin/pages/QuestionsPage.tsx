@@ -66,11 +66,14 @@ export const QuestionsPage: React.FC<QuestionsPageProps> = ({
     },
     {
       key: 'subjectName',
-      header: 'Subject & Topic',
+      header: 'Subject / Topic / Chapter',
       render: (row) => (
         <div className="space-y-0.5">
-          <div className="text-slate-200 font-medium">{row.subjectName || 'Mathematics'}</div>
-          <div className="text-slate-500 text-[11px]">{row.topicName || 'Algebra'}</div>
+          <div className="text-slate-200 font-medium">{row.subjectName || 'Unassigned Subject'}</div>
+          <div className="text-slate-500 text-[11px]">
+            {row.topicName || 'No Topic'}
+            {row.chapterName ? ` • ${row.chapterName}` : ''}
+          </div>
         </div>
       ),
     },

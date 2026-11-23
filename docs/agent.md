@@ -11,7 +11,7 @@
 | :--- | :--- | :--- |
 | **Database** | **Hostinger Remote MySQL 8.0 InnoDB** (`u427015050_drizzle` / `srv1562.hstgr.io`) | **DO NOT USE PostgreSQL, SQLite, or Neon**. All tables use standard MySQL types (`mysqlTable`, `varchar`, `int`, `timestamp`, `double`, `boolean`, `text`). |
 | **ORM** | **Drizzle ORM** (`drizzle-orm/mysql2` & `drizzle-kit`) | **STRICTLY NO PRISMA**. Prisma has been completely deprecated and removed. Never create `.prisma` files or introduce `@prisma/client`. |
-| **Authentication** | **Clerk** (`@clerk/clerk-react` / Application `app_3LavFW7A5cCB70BWweaphvP77wn`) | **NO CUSTOM PASSWORD AUTH**. Custom password registration and password hashes are strictly deleted in favor of Clerk authentication. |
+| **Authentication** | **Clerk** (`@clerk/clerk-react`) + **HS256 JWT / PBKDF2** (`services/auth-service`) | Admin dashboard uses Clerk RS256 JWKS verification; mobile/API clients also support `/api/v1/auth/register` & `/api/v1/auth/login` with PBKDF2-SHA256 hashing and signed HS256 JWTs. |
 | **API Backend** | **Cloudflare Workers + Hono Framework** | Edge-native V8 isolate runtime. All endpoints run as Hono sub-apps or routes under `/api/v1`. |
 | **Database Pooling** | **Cloudflare Hyperdrive** | Connection multiplexing via `c.env.HYPERDRIVE` with fallback to direct Hostinger MySQL connection string. |
 | **V8 Compatibility** | `mysql2/promise` with `disableEval: true` | Required because Cloudflare Workers isolates block `eval()` which `mysql2` uses internally by default. |
@@ -33,7 +33,7 @@ quiz-platform/
 │   └── shared-types/                          # Shared domain interfaces & types
 │
 ├── services/
-│   ├── quiz-service/src/index.ts              # Hono sub-app for Categories, Exams, Subjects, Topics, Quizzes, Questions
+│   ├── quiz-service/src/index.ts              # Hono sub-app for Categories, Exams, Subjects, Topics, Chapters, Quizzes, Questions
 │   ├── attempt-service/src/index.ts           # Timed Attempts, Submissions, Scoring, Bookmarks & SQLite Sync
 │   ├── auth-service/src/index.ts              # Authentication, JWT, and Multi-Device Management
 │   ├── payment-service/src/index.ts           # Orders, bKash/Nagad Payments & QuizAccess
@@ -59,20 +59,27 @@ quiz-platform/
 
 All database tables are strictly defined using Drizzle MySQL core:
 - `users`: `id`, `name`, `email`, `passwordHash`, `role`, `isActive`, `createdAt`, `updatedAt`
+- `sessions`: `id`, `userId`, `deviceId`, `tokenHash`, `expiresAt`, `revokedAt`, `createdAt`
+- `devices`: `id`, `userId`, `deviceName`, `deviceFingerprint`, `platform`, `lastActiveAt`, `createdAt`
 - `categories`: `id`, `name`, `slug`, `createdAt`, `updatedAt`
 - `exams`: `id`, `categoryId`, `name`, `slug`, `description`, `createdAt`, `updatedAt`
 - `subjects`: `id`, `name`, `slug`
-- `topics`: `id`, `subjectId`, `name`, `slug`
-- `quizzes`: `id`, `examId`, `categoryId`, `title`, `slug`, `description`, `status`, `price`, `currency`, `durationSeconds`, `passPercentage`, `shuffleQuestions`, `shuffleOptions`, `negativeMark`, `maxAttempts`, `publishedAt`, `deletedAt`, `createdAt`, `updatedAt`
-- `questions`: `id`, `subjectId`, `topicId`, `body`, `explanation`, `type`, `difficulty`, `marks`, `imageUrl`, `isActive`, `deletedAt`, `createdAt`, `updatedAt`
+- `topics`: `id`, `subjectId` (**nullable**), `name`, `slug`
+- `chapters`: `id`, `topicId` (**nullable**), `subjectId` (**nullable**), `name`, `slug`, `createdAt`, `updatedAt`
+- `quizzes`: `id`, `examId`, `categoryId`, `topicId` (**nullable**), `chapterId` (**nullable**), `title`, `slug`, `description`, `status`, `price`, `currency`, `durationSeconds`, `passPercentage`, `shuffleQuestions`, `shuffleOptions`, `negativeMark`, `maxAttempts`, `publishedAt`, `deletedAt`, `createdAt`, `updatedAt`
+- `questions`: `id`, `subjectId`, `topicId` (**nullable**), `chapterId` (**nullable**), `body`, `explanation`, `type`, `difficulty`, `marks`, `imageUrl`, `isActive`, `deletedAt`, `createdAt`, `updatedAt`
 - `options`: `id`, `questionId`, `text`, `imageUrl`, `isCorrect`, `position`
 - `quizQuestions`: `quizId`, `questionId`, `position`, `marks`
 - `attempts`: `id`, `userId`, `quizId`, `status`, `requestId`, `startedAt`, `submittedAt`, `expiresAt`, `totalQuestions`, `correctCount`, `wrongCount`, `unansweredCount`, `score`, `maxScore`, `percentage`, `timeTakenSeconds`
 - `attemptAnswers`: `id`, `attemptId`, `questionId`, `selectedOptionId`, `isCorrect`, `marksAwarded`, `timeTakenSeconds`, `answeredAt`
 - `bookmarks`: `userId`, `questionId`, `createdAt`
+- `savedQuizzes`: `userId`, `quizId`, `createdAt`
 - `orders`: `id`, `userId`, `quizId`, `amount`, `currency`, `status`, `idempotencyKey`, `createdAt`, `paidAt`
 - `payments`: `id`, `orderId`, `provider`, `providerReference`, `status`, `amount`, `currency`, `createdAt`, `paidAt`
 - `quizAccess`: `id`, `userId`, `quizId`, `orderId`, `grantedAt`, `expiresAt`
+- `badges`: `id`, `name`, `description`, `iconUrl`, `criteria`
+- `userBadges`: `userId`, `badgeId`, `awardedAt`
+- `leaderboardEntries`: `id`, `quizId`, `userId`, `score`, `timeTakenSeconds`, `rank`, `updatedAt`
 
 ---
 
@@ -117,7 +124,7 @@ The root file **`quiz-platform.postman_collection.json`** contains all API endpo
 - System & Diagnostics (`/health`, `/api/v1/db-health`, `/api/v1/poc/db-check`)
 - Categories (CRUD)
 - Exams (CRUD)
-- Subjects & Topics (CRUD)
+- Subjects, Topics & Chapters (CRUD — topics & chapters are optional/nullable)
 - Quizzes (CRUD + `/questions` + `/offline-package`)
 - Questions & Options (Atomic creation + deletion)
 - Candidate Attempts & Scoring (`/start`, `/answers`, `/submit`)

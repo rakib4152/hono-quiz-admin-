@@ -24,11 +24,12 @@ export interface QuestionDTO {
   categoryId: string;
   examId: string;
   subjectId: string;
-  topicId: string;
-  chapterId: string;
+  topicId?: string | null;
+  chapterId?: string | null;
   categoryName?: string;
   subjectName?: string;
-  topicName?: string;
+  topicName?: string | null;
+  chapterName?: string | null;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   positiveMarks: number;
   negativeMarks: number;
@@ -90,8 +91,8 @@ export interface SubjectDTO {
 
 export interface TopicDTO {
   id: string;
-  subjectId: string;
-  subjectName: string;
+  subjectId?: string | null;
+  subjectName?: string | null;
   nameEn: string;
   nameBn: string;
   code: string;
@@ -104,9 +105,10 @@ export interface TopicDTO {
 
 export interface ChapterDTO {
   id: string;
-  topicId: string;
-  topicName: string;
-  subjectName: string;
+  topicId?: string | null;
+  topicName?: string | null;
+  subjectId?: string | null;
+  subjectName?: string | null;
   nameEn: string;
   nameBn: string;
   code: string;
@@ -901,8 +903,8 @@ export const mapPrismaSubject = mapDrizzleSubject;
 export function mapDrizzleTopic(top: any): TopicDTO {
   return {
     id: top.id || `top-${Date.now()}`,
-    subjectId: top.subjectId || '',
-    subjectName: top.subjectName || top.subject?.name || top.subject?.nameEn || 'Subject',
+    subjectId: top.subjectId ?? null,
+    subjectName: top.subjectName ?? top.subject?.name ?? top.subject?.nameEn ?? null,
     nameEn: top.nameEn || top.name || 'Untitled Topic',
     nameBn: top.nameBn || top.name || '',
     code: top.code || top.slug || `TOP-${(top.id || '').slice(-4)}`,
@@ -921,9 +923,10 @@ export const mapPrismaTopic = mapDrizzleTopic;
 export function mapDrizzleChapter(ch: any): ChapterDTO {
   return {
     id: ch.id || `ch-${Date.now()}`,
-    topicId: ch.topicId || '',
-    topicName: ch.topicName || ch.topic?.name || ch.topic?.nameEn || 'Topic',
-    subjectName: ch.subjectName || ch.subject?.name || 'Subject',
+    topicId: ch.topicId ?? null,
+    topicName: ch.topicName ?? ch.topic?.name ?? ch.topic?.nameEn ?? null,
+    subjectId: ch.subjectId ?? null,
+    subjectName: ch.subjectName ?? ch.subject?.name ?? null,
     nameEn: ch.nameEn || ch.name || 'Untitled Chapter',
     nameBn: ch.nameBn || ch.name || '',
     code: ch.code || ch.slug || `CH-${(ch.id || '').slice(-4)}`,

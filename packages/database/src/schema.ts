@@ -79,13 +79,13 @@ export const subjects = mysqlTable('subjects', {
 });
 
 /**
- * Topics Table
+ * Topics Table (optional curriculum level; subjectId is nullable)
  */
 export const topics = mysqlTable(
   'topics',
   {
     id: varchar('id', { length: 30 }).primaryKey(),
-    subjectId: varchar('subject_id', { length: 30 }).notNull(),
+    subjectId: varchar('subject_id', { length: 30 }),
     name: varchar('name', { length: 191 }).notNull(),
     slug: varchar('slug', { length: 191 }).notNull(),
   },
@@ -95,7 +95,26 @@ export const topics = mysqlTable(
 );
 
 /**
- * Quizzes Table
+ * Chapters Table (optional curriculum level; topicId and subjectId are both nullable)
+ */
+export const chapters = mysqlTable(
+  'chapters',
+  {
+    id: varchar('id', { length: 30 }).primaryKey(),
+    topicId: varchar('topic_id', { length: 30 }),
+    subjectId: varchar('subject_id', { length: 30 }),
+    name: varchar('name', { length: 191 }).notNull(),
+    slug: varchar('slug', { length: 191 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('topic_chapter_slug_idx').on(table.topicId, table.slug),
+  ]
+);
+
+/**
+ * Quizzes Table (topicId and chapterId are nullable)
  */
 export const quizzes = mysqlTable(
   'quizzes',
@@ -103,6 +122,8 @@ export const quizzes = mysqlTable(
     id: varchar('id', { length: 30 }).primaryKey(),
     examId: varchar('exam_id', { length: 30 }).notNull(),
     categoryId: varchar('category_id', { length: 30 }),
+    topicId: varchar('topic_id', { length: 30 }),
+    chapterId: varchar('chapter_id', { length: 30 }),
     title: varchar('title', { length: 191 }).notNull(),
     slug: varchar('slug', { length: 191 }).notNull(),
     description: text('description'),
@@ -126,12 +147,13 @@ export const quizzes = mysqlTable(
 );
 
 /**
- * Questions Table
+ * Questions Table (topicId and chapterId are both nullable)
  */
 export const questions = mysqlTable('questions', {
   id: varchar('id', { length: 30 }).primaryKey(),
   subjectId: varchar('subject_id', { length: 30 }).notNull(),
   topicId: varchar('topic_id', { length: 30 }),
+  chapterId: varchar('chapter_id', { length: 30 }),
   body: text('body').notNull(),
   explanation: text('explanation'),
   type: varchar('type', { length: 30 }).default('single_choice').notNull(),
@@ -290,10 +312,39 @@ export const examsRelations = relations(exams, ({ one, many }) => ({
   quizzes: many(quizzes),
 }));
 
+export const topicsRelations = relations(topics, ({ one, many }) => ({
+  subject: one(subjects, {
+    fields: [topics.subjectId],
+    references: [subjects.id],
+  }),
+  chapters: many(chapters),
+  questions: many(questions),
+}));
+
+export const chaptersRelations = relations(chapters, ({ one, many }) => ({
+  topic: one(topics, {
+    fields: [chapters.topicId],
+    references: [topics.id],
+  }),
+  subject: one(subjects, {
+    fields: [chapters.subjectId],
+    references: [subjects.id],
+  }),
+  questions: many(questions),
+}));
+
 export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
   exam: one(exams, {
     fields: [quizzes.examId],
     references: [exams.id],
+  }),
+  topic: one(topics, {
+    fields: [quizzes.topicId],
+    references: [topics.id],
+  }),
+  chapter: one(chapters, {
+    fields: [quizzes.chapterId],
+    references: [chapters.id],
   }),
   quizQuestions: many(quizQuestions),
   attempts: many(attempts),
@@ -307,6 +358,10 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   topic: one(topics, {
     fields: [questions.topicId],
     references: [topics.id],
+  }),
+  chapter: one(chapters, {
+    fields: [questions.chapterId],
+    references: [chapters.id],
   }),
   options: many(options),
   quizQuestions: many(quizQuestions),

@@ -162,7 +162,7 @@ const buildApiMetadata = (c: any) => ({
   },
   services: [
     'auth & devices (/api/v1/auth/register, /api/v1/auth/login, /api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices)',
-    'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/subjects, /api/v1/topics, /api/v1/quizzes, /api/v1/questions)',
+    'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/subjects, /api/v1/topics, /api/v1/chapters, /api/v1/quizzes, /api/v1/questions)',
     'attempts & sync (/api/v1/quizzes/:id/start, /api/v1/attempts/:id, /api/v1/attempts/:id/answers, /api/v1/attempts/:id/submit, /api/v1/sync/attempts)',
     'bookmarks & saved (/api/v1/bookmarks, /api/v1/bookmarks/toggle, /api/v1/saved-quizzes/toggle)',
     'payments & access (/api/v1/orders, /api/v1/payments/verify, /api/v1/quiz-access/:quizId)',
@@ -251,8 +251,11 @@ app.get('/api/v1/openapi.json', (c) => {
       '/api/v1/exams': { get: { summary: 'List All Exams' }, post: { summary: 'Create Exam' } },
       '/api/v1/exams/{id}': { get: { summary: 'Get Exam by ID' }, delete: { summary: 'Delete Exam' } },
       '/api/v1/subjects': { get: { summary: 'List Subjects' }, post: { summary: 'Create Subject' } },
-      '/api/v1/topics': { get: { summary: 'List Topics' }, post: { summary: 'Create Topic' } },
-      '/api/v1/quizzes': { get: { summary: 'List All Quizzes' }, post: { summary: 'Create Quiz' } },
+      '/api/v1/topics': { get: { summary: 'List Topics' }, post: { summary: 'Create Topic (subjectId nullable)' } },
+      '/api/v1/topics/{id}': { put: { summary: 'Update Topic' }, delete: { summary: 'Delete Topic' } },
+      '/api/v1/chapters': { get: { summary: 'List Chapters' }, post: { summary: 'Create Chapter (topicId & subjectId nullable)' } },
+      '/api/v1/chapters/{id}': { put: { summary: 'Update Chapter' }, delete: { summary: 'Delete Chapter' } },
+      '/api/v1/quizzes': { get: { summary: 'List All Quizzes' }, post: { summary: 'Create Quiz (topicId & chapterId nullable)' } },
       '/api/v1/quizzes/{id}': {
         get: { summary: 'Get Quiz Details by ID' },
         put: { summary: 'Update Quiz' },
