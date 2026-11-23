@@ -43,6 +43,8 @@ export interface AppEnv {
     ENVIRONMENT?: string;
     API_VERSION?: string;
     CORS_ALLOWED_ORIGINS?: string;
+    JWT_SECRET?: string;
+    INTERNAL_API_KEY?: string;
     [key: string]: any;
   };
 }

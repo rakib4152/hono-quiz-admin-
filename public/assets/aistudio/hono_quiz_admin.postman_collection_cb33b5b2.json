@@ -1,0 +1,1431 @@
+{
+  "info": {
+    "name": "hono quiz admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Production-ready Postman Collection for QuizPlatform microservices running on Cloudflare Workers (Hono) connected to Hostinger MySQL (u427015050_drizzle) via Drizzle ORM and Cloudflare Hyperdrive.\n\nIncludes complete CRUD endpoints for Categories, Exams, Subjects, Topics, Quizzes, Questions, Attempts, Offline Sync, Payments, Auth, and Analytics."
+  },
+  "item": [
+    {
+      "id": "f25cadd0-b6da-4602-bfd7-0a79e454d12f",
+      "name": "3. Exams",
+      "item": [
+        {
+          "id": "f8856860-d53b-4923-bf7a-420e6775208b",
+          "name": "Delete Exam",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/exams/{{examId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exams",
+                "{{examId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "7eaa4055-8c21-4913-9cc2-afbe3262c974",
+          "name": "List All Exams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/exams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exams"
+              ]
+            }
+          }
+        },
+        {
+          "id": "62cc41d0-ad19-4ecf-9714-5d7233c24cdc",
+          "name": "Create Exam",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/exams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"categoryId\":\"{{categoryId}}\",\"name\":\"Bangladesh Bank Assistant Director (General)\",\"slug\":\"bb-ad-general\",\"description\":\"Recruitment examination for Bangladesh Bank AD\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "58813c08-d11a-4491-9367-ab1f5c48e13d",
+          "name": "Get Exam by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/exams/{{examId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "exams",
+                "{{examId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "dd66aec0-5c71-4914-8ea2-21c70a20326c",
+      "name": "2. Categories",
+      "item": [
+        {
+          "id": "e58ddf82-921d-44d4-a7b4-1629720ed0e3",
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Bank Recruitment Exams\",\"slug\":\"bank-recruitment-exams\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "b0527f84-1811-43c1-8ac5-dd556756a16f",
+          "name": "List All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "id": "af3973a5-812b-43dc-a07d-e29b06567b00",
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "877478ef-e386-4778-896f-a57f3fe6333e",
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "1d4b723c-9f3c-401a-bf9c-c1e78166de99",
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Bank Combined Officer Recruitment\",\"slug\":\"bank-combined-officer\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "c7e52282-5891-4a11-8bff-bc2fcaf70e0f",
+      "name": "4. Subjects & Topics",
+      "item": [
+        {
+          "id": "97dbc5e6-a406-4e36-9ff8-aeb5cf6f5724",
+          "name": "List Subjects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subjects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "subjects"
+              ]
+            }
+          }
+        },
+        {
+          "id": "94420453-ef11-42ac-b79a-bba55f890ece",
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/subjects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "subjects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"General Science & Tech\",\"slug\":\"general-science-tech\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "40dece2d-7bd3-4260-bd0f-591e1b725405",
+          "name": "List Topics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/topics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topics"
+              ]
+            }
+          }
+        },
+        {
+          "id": "3319bd64-f021-4ed3-bdf2-36806d79fa3c",
+          "name": "Create Topic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/topics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"subjectId\":\"sub_bangla\",\"name\":\"Modern Bengali Poetry\",\"slug\":\"modern-bengali-poetry\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "a20766b1-a18f-4512-87a8-059287c174f9",
+      "name": "9. Bookmarks & Saved Quizzes",
+      "item": [
+        {
+          "id": "be515b09-3bc3-4fb0-9723-ad3c5e52474d",
+          "name": "List User Bookmarks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookmarks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookmarks"
+              ]
+            }
+          }
+        },
+        {
+          "id": "7d62c883-830d-440d-8586-60a716ccd9ff",
+          "name": "Toggle Bookmark on Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookmarks/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookmarks",
+                "toggle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"questionId\":\"{{questionId}}\",\"note\":\"Review Charyapada discoverer\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "42d79e3b-2fa0-4be5-8bfe-f66195406847",
+          "name": "Save Quiz for Later",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/saved-quizzes/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "saved-quizzes",
+                "toggle"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"quizId\":\"{{quizId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "97c319a8-5553-433e-8206-a3b9dc0c4c9e",
+      "name": "5. Quizzes",
+      "item": [
+        {
+          "id": "fcc63beb-4906-4025-bc55-bfe7c612a7fa",
+          "name": "Link Question to Quiz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"questionId\":\"{{questionId}}\",\"position\":1,\"marks\":1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "f9ee5cad-a61c-4c04-ae2b-a588a2eac060",
+          "name": "List All Quizzes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes"
+              ]
+            }
+          }
+        },
+        {
+          "id": "bc788ead-ca2b-4ee7-9413-bfdbdab75cbb",
+          "name": "Create Quiz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"examId\":\"{{examId}}\",\"title\":\"BCS 47th Live Mock Test #2\",\"slug\":\"bcs-47th-mock-2\",\"description\":\"Official live mock examination with negative marking.\",\"status\":\"PUBLISHED\",\"price\":0,\"currency\":\"BDT\",\"durationSeconds\":7200,\"passPercentage\":50,\"negativeMark\":0.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "972878f2-9869-4167-b0fc-7e5490bec398",
+          "name": "Delete Quiz",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "654eacf5-e254-4898-abd1-96b1fcc2fbba",
+          "name": "Get Quiz Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Role",
+                "value": "USER"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "1d18e51c-2020-4b12-9edf-5b732b4f2951",
+          "name": "Get Offline Quiz Package",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}/offline-package",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}",
+                "offline-package"
+              ]
+            }
+          }
+        },
+        {
+          "id": "0e1e54e7-faa7-47ad-a744-c7970734ec57",
+          "name": "Update Quiz",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"PUBLISHED\",\"price\":100,\"passPercentage\":55}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "8e7bf3f2-65b1-426a-ba81-d9516aa06391",
+      "name": "12. Analytics & Leaderboards",
+      "item": [
+        {
+          "id": "cbe16890-0fa5-47f9-878c-7e8205e4c50a",
+          "name": "Get Quiz Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/leaderboards/{{quizId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "leaderboards",
+                "{{quizId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "3aba39bf-6527-4985-82e5-fe78889bad5e",
+          "name": "Get User Earned Badges",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/badges/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "badges",
+                "my"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "729a2570-c3f9-40f2-87f4-bfef2e815e89",
+      "name": "7. Candidate Attempts & Scoring",
+      "item": [
+        {
+          "id": "a946c0bf-56e9-4b91-b2bf-0e33ac79ac92",
+          "name": "Save Candidate Answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attempts/{{attemptId}}/answers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "attempts",
+                "{{attemptId}}",
+                "answers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"questionId\":\"{{questionId}}\",\"selectedOptionId\":\"opt_1\",\"timeSpentSeconds\":28}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "8517b23a-a66d-4643-9bd5-6d4ad3654c73",
+          "name": "Submit Attempt for Authoritative Scoring",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attempts/{{attemptId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "attempts",
+                "{{attemptId}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"completedAt\":\"2026-11-02T13:20:00.000Z\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "4543a0cf-c5a0-4dfb-949c-36f9e18ae616",
+          "name": "Get Attempt Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attempts/{{attemptId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "attempts",
+                "{{attemptId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "27792356-45cf-4325-8f49-651774dcc41b",
+          "name": "Start Quiz Attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quizzes/{{quizId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quizzes",
+                "{{quizId}}",
+                "start"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\":\"usr_student_01\",\"deviceType\":\"WEB\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "50bc65c7-ce37-4476-878d-c0dcac41e8c2",
+      "name": "13. Inter-Service Internal",
+      "item": [
+        {
+          "id": "31a48774-618f-4044-97d6-ce2557455536",
+          "name": "Fetch Quiz Authoritative Scoring Keys",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/quiz-scoring-keys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "internal",
+                "quiz-scoring-keys"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"quizId\":\"{{quizId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "4e6e3d14-b2c9-4a7f-9ec7-a37040088bc2",
+      "name": "6. Questions & Options",
+      "item": [
+        {
+          "id": "b9b27895-a315-4a2d-a3f5-99afc9ec96f0",
+          "name": "Delete Question",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questions/{{questionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questions",
+                "{{questionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "43bc0c9b-9fff-4f7c-963b-4ef78f5cad1a",
+          "name": "List All Questions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questions"
+              ]
+            }
+          }
+        },
+        {
+          "id": "3ff601b1-dcac-42c5-ab8c-084e14ba793c",
+          "name": "Create Question with Options (Atomic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/questions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "questions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"subjectId\":\"sub_bangla\",\"topicId\":\"top_bangla_lit\",\"body\":\"Which period is considered the Dark Age of Bengali Literature?\",\"explanation\":\"The period from 1201 to 1350 is known as the Dark Age in Bengali literature.\",\"difficulty\":2,\"marks\":1,\"options\":[{\"text\":\"1201 - 1350 AD\",\"isCorrect\":true,\"position\":1},{\"text\":\"950 - 1200 AD\",\"isCorrect\":false,\"position\":2},{\"text\":\"1351 - 1576 AD\",\"isCorrect\":false,\"position\":3},{\"text\":\"1576 - 1760 AD\",\"isCorrect\":false,\"position\":4}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "388bf27d-eba2-4e6c-970b-5267aa4c8063",
+      "name": "1. System & Diagnostics",
+      "item": [
+        {
+          "id": "9b482e42-2364-40c3-a719-07edb7e53349",
+          "name": "Gateway Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "id": "9074743a-8a4a-4e33-9f72-90d7ae0fb9e4",
+          "name": "Hostinger MySQL Database Health & Ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/db-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "db-health"
+              ]
+            }
+          }
+        },
+        {
+          "id": "74321aca-3f2c-4524-9110-9a1afc1bd2b9",
+          "name": "Database PoC Connectivity Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/poc/db-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "poc",
+                "db-check"
+              ]
+            }
+          }
+        },
+        {
+          "id": "19b3d0e0-4eb7-4547-abe7-2e65bfab9979",
+          "name": "OpenAPI Specification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/openapi.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "openapi.json"
+              ]
+            }
+          }
+        },
+        {
+          "id": "07cf532a-f2b7-40d6-b0a2-d2650e289e9e",
+          "name": "API v1 Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "356a0e1c-34c3-45e1-8955-2b6c8eb568f3",
+      "name": "8. Offline Synchronization",
+      "item": [
+        {
+          "id": "480494eb-2125-4bf7-9e9b-2e13351bf0a7",
+          "name": "Sync Offline Attempts Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sync/attempts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sync",
+                "attempts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"batchId\":\"sync_batch_20261102_001\",\"attempts\":[{\"clientAttemptId\":\"offline_att_001\",\"quizId\":\"{{quizId}}\",\"startedAt\":\"2026-11-02T12:00:00.000Z\",\"completedAt\":\"2026-11-02T12:45:00.000Z\",\"answers\":[{\"questionId\":\"{{questionId}}\",\"selectedOptionId\":\"opt_1\",\"timeSpentSeconds\":35}]}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "33386254-0d63-4544-a800-7c0d6417a7b3",
+      "name": "11. Payments & Access",
+      "item": [
+        {
+          "id": "ff9f7e5f-c2dd-41fc-b361-7b90e9895877",
+          "name": "Create Paid Quiz Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"quizId\":\"{{quizId}}\",\"amount\":100,\"currency\":\"BDT\",\"provider\":\"BKASH\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "e2dc926e-d349-4981-90ec-7fb7b8d40f0e",
+          "name": "Check Quiz Access Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/quiz-access/{{quizId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "quiz-access",
+                "{{quizId}}"
+              ]
+            }
+          }
+        },
+        {
+          "id": "132d0751-cd61-4e45-965f-32f07d0b22d1",
+          "name": "Verify Payment & Unlock Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\":\"ord_sample_01\",\"paymentId\":\"pay_bkash_trx12345\",\"status\":\"COMPLETED\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "32ad85d6-0a77-4f0c-8e5b-76d487817f2e",
+      "name": "10. Authentication & Devices",
+      "item": [
+        {
+          "id": "dbb91b2f-202c-4333-bc9f-675d9fc1e7fe",
+          "name": "List Active Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/devices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices"
+              ]
+            }
+          }
+        },
+        {
+          "id": "bb801625-98e0-41a1-961e-3ee6f518b5bf",
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "id": "84d2310f-5183-4f6a-804a-bf51f2d49f44",
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Candidate One\",\"email\":\"candidate1@example.com\",\"password\":\"SecurePass123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "4b255ce6-5d0c-445e-bfcd-6e3753125a67",
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"candidate1@example.com\",\"password\":\"SecurePass123!\",\"deviceInfo\":{\"userAgent\":\"PostmanRuntime/7.40.0\",\"platform\":\"macOS\"}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8787",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "cat_govt_jobs",
+      "type": "string"
+    },
+    {
+      "key": "examId",
+      "value": "exam_47_bcs",
+      "type": "string"
+    },
+    {
+      "key": "quizId",
+      "value": "quiz_bcs_preli_model_01",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "q_charyapada_01",
+      "type": "string"
+    },
+    {
+      "key": "attemptId",
+      "value": "att_sample_01",
+      "type": "string"
+    }
+  ]
+}

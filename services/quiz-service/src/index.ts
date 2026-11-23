@@ -13,11 +13,15 @@ import {
   endDrizzleConnection,
 } from '../../../packages/database/src/index.js';
 import { eq, desc, asc, and, inArray, sql } from 'drizzle-orm';
+import { resolveAuthenticatedUser } from '../../auth-service/src/index.js';
+import { getInternalServiceKey } from '../../auth-service/src/crypto.js';
 
 type Bindings = {
   HYPERDRIVE?: { connectionString: string };
   DATABASE_URL?: string;
   CORS_ALLOWED_ORIGINS?: string;
+  JWT_SECRET?: string;
+  INTERNAL_API_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -46,15 +50,36 @@ async function cleanupDbConnection(db: DrizzleDB, c: any): Promise<void> {
   }
 }
 
+function getExecutionCtx(c: any): { waitUntil: (p: Promise<any>) => void } | undefined {
+  try {
+    return c.executionCtx;
+  } catch {
+    return undefined;
+  }
+}
+
+async function resolveCaller(c: any) {
+  const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
+  if (!token) return null;
+  return resolveAuthenticatedUser({
+    token,
+    env: c.env,
+    executionCtx: getExecutionCtx(c),
+  });
+}
+
 /**
- * Requires ADMIN or SUPER_ADMIN role for mutating endpoints
+ * Requires an authenticated ADMIN or SUPER_ADMIN Bearer token for mutating endpoints
  */
-function requireAdmin(c: any): { allowed: boolean; userRole?: string } | Response {
-  const userRole = c.req.header('X-User-Role') || '';
-  if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+async function requireAdmin(c: any): Promise<{ allowed: boolean; userId: string; userRole: string } | Response> {
+  const user = await resolveCaller(c);
+  if (!user) {
+    return c.json({ success: false, error: 'Authentication required (Bearer token missing or invalid)' }, 401);
+  }
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
     return c.json({ success: false, error: 'Admin access required' }, 403);
   }
-  return { allowed: true, userRole };
+  return { allowed: true, userId: user.id, userRole: user.role };
 }
 
 function generateId(prefix: string): string {
@@ -147,7 +172,7 @@ app.get('/categories/:id', async (c) => {
  * Create a new category in Hostinger MySQL
  */
 app.post('/categories', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -182,7 +207,7 @@ app.post('/categories', async (c) => {
  * Update an existing category
  */
 app.put('/categories/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const categoryId = c.req.param('id');
@@ -209,7 +234,7 @@ app.put('/categories/:id', async (c) => {
  * Delete a category by ID
  */
 app.delete('/categories/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const categoryId = c.req.param('id');
@@ -277,7 +302,7 @@ app.get('/exams/:id', async (c) => {
  * Create a new exam
  */
 app.post('/exams', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -313,7 +338,7 @@ app.post('/exams', async (c) => {
  * Delete an exam
  */
 app.delete('/exams/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const examId = c.req.param('id');
@@ -352,7 +377,7 @@ app.get('/subjects', async (c) => {
  * Create a new subject
  */
 app.post('/subjects', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -401,7 +426,7 @@ app.get('/topics', async (c) => {
  * Create a new topic under a subject
  */
 app.post('/topics', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -464,8 +489,8 @@ app.get('/quizzes', async (c) => {
 app.get('/quizzes/:id', async (c) => {
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
-  const userRole = c.req.header('X-User-Role') || '';
-  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+  const caller = await resolveCaller(c);
+  const isAdmin = caller?.role === 'ADMIN' || caller?.role === 'SUPER_ADMIN';
 
   try {
     const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, quizId)).limit(1);
@@ -530,7 +555,7 @@ app.get('/quizzes/:id', async (c) => {
  * Create a new quiz
  */
 app.post('/quizzes', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -587,7 +612,7 @@ app.post('/quizzes', async (c) => {
  * Update quiz metadata or publish status
  */
 app.put('/quizzes/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
@@ -620,7 +645,7 @@ app.put('/quizzes/:id', async (c) => {
  * Delete quiz and question links
  */
 app.delete('/quizzes/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
@@ -640,7 +665,7 @@ app.delete('/quizzes/:id', async (c) => {
  * Link questions to a quiz
  */
 app.post('/quizzes/:id/questions', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const quizId = c.req.param('id');
@@ -751,7 +776,7 @@ app.get('/questions', async (c) => {
  * Create atomic question and options
  */
 app.post('/questions', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   try {
@@ -827,7 +852,7 @@ app.post('/questions', async (c) => {
  * Delete a question and its options
  */
 app.delete('/questions/:id', async (c) => {
-  const admin = requireAdmin(c);
+  const admin = await requireAdmin(c);
   if (admin instanceof Response) return admin;
   const db = await createDrizzleFromEnv(c.env);
   const questionId = c.req.param('id');
@@ -852,6 +877,13 @@ app.delete('/questions/:id', async (c) => {
  * Internal endpoint for attempt-service to fetch quiz metadata and answer keys
  */
 app.post('/internal/quiz-scoring-keys', async (c) => {
+  const expectedInternalKey = getInternalServiceKey(c.env);
+  const providedInternalKey = c.req.header('X-Internal-Service-Key') || '';
+  if (providedInternalKey !== expectedInternalKey) {
+    const admin = await requireAdmin(c);
+    if (admin instanceof Response) return admin;
+  }
+
   const db = await createDrizzleFromEnv(c.env);
   try {
     const { quizId } = await c.req.json().catch(() => ({}));
@@ -893,6 +925,7 @@ app.post('/internal/quiz-scoring-keys', async (c) => {
 // ============================================================================
 
 function createMockContext(req: { path: string; method: string; body?: any; correlationId: string }, env: Bindings) {
+  const internalKey = getInternalServiceKey(env);
   return {
     req: {
       path: req.path,
@@ -905,6 +938,7 @@ function createMockContext(req: { path: string; method: string; body?: any; corr
         headers: {
           'Content-Type': 'application/json',
           'X-Correlation-ID': req.correlationId,
+          'X-Internal-Service-Key': internalKey,
         },
       }),
     },

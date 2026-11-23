@@ -2,11 +2,11 @@
  * Cloudflare Workers Hono Application Entry Point
  * Base Route: /api/v1
  * Microservices Architecture:
- * - Auth Service: auth_db (User, Session, Device)
- * - Quiz Service: quiz_db (Category, Exam, Subject, Topic, Quiz, Question, Option, QuizQuestion)
- * - Attempt Service: attempt_db (QuizAttempt, AttemptAnswer, Bookmark, SavedQuiz, OfflineSync)
- * - Payment Service: payment_db (Order, Payment, QuizAccess)
- * - Analytics Service: analytics_db (Badge, UserBadge, LeaderboardEntry)
+ * - Auth Service: users & active devices (JWT + Clerk)
+ * - Quiz Service: categories, exams, subjects, topics, quizzes, questions, options, quiz_questions
+ * - Attempt Service: attempts, attempt_answers, bookmarks, saved_quizzes, offline sync
+ * - Payment Service: orders, payments, quiz_access
+ * - Analytics Service: leaderboards, badges
  */
 
 import { Hono } from 'hono';
@@ -19,7 +19,7 @@ import quizApp from '@quiz-service';
 import { attemptService } from '@attempt-service';
 import { paymentService } from '@payment-service';
 import { analyticsService } from '@analytics-service';
-import { authApp } from '@auth-service';
+import { authApp, resolveAuthenticatedUser } from '@auth-service';
 
 import {
   createDrizzleClient,
@@ -93,6 +93,7 @@ app.use('*', (c, next) => {
       'X-Request-ID',
       'X-User-Role',
       'X-Idempotency-Key',
+      'X-Internal-Service-Key',
     ],
     exposeHeaders: ['Content-Length', 'X-Total-Count', 'X-Correlation-ID'],
     maxAge: 86400,
@@ -100,7 +101,7 @@ app.use('*', (c, next) => {
   })(c, next);
 });
 
-// Mount native Hono microservices under /api/v1 (and /auth/* at root)
+// Mount native Hono microservices under /api/v1 (and /auth/*, /devices/* at root)
 app.route('/api/v1', quizApp);
 app.route('/api/v1', authApp);
 app.route('/', authApp);
@@ -160,11 +161,12 @@ const buildApiMetadata = (c: any) => ({
     assets: !!c.env?.ASSETS,
   },
   services: [
-    'auth (/api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices/register)',
-    'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/quizzes)',
-    'attempts (/api/v1/quizzes/:id/start, /api/v1/attempts)',
-    'payments (/api/v1/orders, /api/v1/payments)',
-    'analytics (/api/v1/leaderboards, /api/v1/badges)',
+    'auth & devices (/api/v1/auth/register, /api/v1/auth/login, /api/v1/auth/clerk-sync, /api/v1/auth/me, /api/v1/devices)',
+    'catalog & quizzes (/api/v1/categories, /api/v1/exams, /api/v1/subjects, /api/v1/topics, /api/v1/quizzes, /api/v1/questions)',
+    'attempts & sync (/api/v1/quizzes/:id/start, /api/v1/attempts/:id, /api/v1/attempts/:id/answers, /api/v1/attempts/:id/submit, /api/v1/sync/attempts)',
+    'bookmarks & saved (/api/v1/bookmarks, /api/v1/bookmarks/toggle, /api/v1/saved-quizzes/toggle)',
+    'payments & access (/api/v1/orders, /api/v1/payments/verify, /api/v1/quiz-access/:quizId)',
+    'analytics (/api/v1/leaderboards/:quizId, /api/v1/badges, /api/v1/badges/my)',
   ],
 });
 
@@ -225,178 +227,172 @@ const handleDbHealth = async (c: any) => {
 app.get('/api/v1/db-health', handleDbHealth);
 app.get('/db-health', handleDbHealth);
 
-// OpenAPI Specification
+// Complete OpenAPI 3.0.3 Specification covering all 36 endpoints
 app.get('/api/v1/openapi.json', (c) => {
   return c.json({
     openapi: '3.0.3',
     info: {
       title: 'Quiz Platform Production API Gateway',
-      version: '1.0.0',
-      description: 'Cloudflare Workers Hono + Hostinger MySQL Microservices API',
+      version: '1.1.0',
+      description: 'Cloudflare Workers Hono + Hostinger MySQL (Drizzle ORM) Microservices API',
     },
     paths: {
-      '/health': { get: { summary: 'System Health Check' } },
-      '/api/v1/health': { get: { summary: 'System Health Check (v1)' } },
-      '/api/v1/db-health': { get: { summary: 'Database Ping and Latency Probe' } },
-      '/api/v1/poc/db-check': { get: { summary: 'Database Proof-of-Concept Probe' } },
-      '/api/v1/categories': { get: { summary: 'List categories' }, post: { summary: 'Create category (Strict MySQL)' } },
-      '/api/v1/exams': { get: { summary: 'List exams' }, post: { summary: 'Create exam (Strict MySQL)' } },
-      '/api/v1/quizzes': { get: { summary: 'List quizzes' }, post: { summary: 'Create quiz (Strict MySQL)' } },
-      '/api/v1/questions': { get: { summary: 'List questions' }, post: { summary: 'Create question (Strict MySQL)' } },
-      '/api/v1/quizzes/{id}/start': { post: { summary: 'Start timed quiz attempt' } },
-      '/api/v1/attempts/{id}/answers': { post: { summary: 'Record candidate answer' } },
-      '/api/v1/attempts/{id}/submit': { post: { summary: 'Authoritative scoring & leaderboard update' } },
-      '/api/v1/orders': { post: { summary: 'Create paid quiz order' } },
-      '/api/v1/payments/verify': { post: { summary: 'Verify payment and grant QuizAccess' } },
-      '/api/v1/sync/attempts': { post: { summary: 'Offline attempt synchronization from SQLite' } },
-      '/api/v1/leaderboards/{id}': { get: { summary: 'Get quiz leaderboard' } },
-      '/api/v1/auth/clerk-sync': { post: { summary: 'Synchronize Clerk user profile to Hostinger MySQL (Clerk Auth)' } },
-      '/api/v1/auth/me': { get: { summary: 'Get current authenticated Clerk user session profile' } },
-      '/api/v1/devices/register': { post: { summary: 'Register candidate mobile device to Clerk user' } },
+      '/health': { get: { summary: 'Gateway Health Check' } },
+      '/api/v1/health': { get: { summary: 'API v1 Health Check' } },
+      '/api/v1/db-health': { get: { summary: 'Hostinger MySQL Database Health & Ping' } },
+      '/api/v1/poc/db-check': { get: { summary: 'Database PoC Connectivity Probe' } },
+      '/api/v1/openapi.json': { get: { summary: 'OpenAPI Specification' } },
+      '/api/v1/categories': { get: { summary: 'List All Categories' }, post: { summary: 'Create Category' } },
+      '/api/v1/categories/{id}': {
+        get: { summary: 'Get Category by ID' },
+        put: { summary: 'Update Category' },
+        delete: { summary: 'Delete Category' },
+      },
+      '/api/v1/exams': { get: { summary: 'List All Exams' }, post: { summary: 'Create Exam' } },
+      '/api/v1/exams/{id}': { get: { summary: 'Get Exam by ID' }, delete: { summary: 'Delete Exam' } },
+      '/api/v1/subjects': { get: { summary: 'List Subjects' }, post: { summary: 'Create Subject' } },
+      '/api/v1/topics': { get: { summary: 'List Topics' }, post: { summary: 'Create Topic' } },
+      '/api/v1/quizzes': { get: { summary: 'List All Quizzes' }, post: { summary: 'Create Quiz' } },
+      '/api/v1/quizzes/{id}': {
+        get: { summary: 'Get Quiz Details by ID' },
+        put: { summary: 'Update Quiz' },
+        delete: { summary: 'Delete Quiz' },
+      },
+      '/api/v1/quizzes/{id}/questions': { post: { summary: 'Link Question to Quiz' } },
+      '/api/v1/quizzes/{id}/offline-package': { get: { summary: 'Get Offline Quiz Package' } },
+      '/api/v1/questions': { get: { summary: 'List All Questions' }, post: { summary: 'Create Question with Options (Atomic)' } },
+      '/api/v1/questions/{id}': { delete: { summary: 'Delete Question' } },
+      '/api/v1/quizzes/{id}/start': { post: { summary: 'Start Quiz Attempt' } },
+      '/api/v1/attempts/{id}': { get: { summary: 'Get Attempt Summary' } },
+      '/api/v1/attempts/{id}/answers': { post: { summary: 'Save Candidate Answer' } },
+      '/api/v1/attempts/{id}/submit': { post: { summary: 'Submit Attempt for Authoritative Scoring' } },
+      '/api/v1/sync/attempts': { post: { summary: 'Sync Offline Attempts Batch' } },
+      '/api/v1/bookmarks': { get: { summary: 'List User Bookmarks' } },
+      '/api/v1/bookmarks/toggle': { post: { summary: 'Toggle Bookmark on Question' } },
+      '/api/v1/saved-quizzes': { get: { summary: 'List Saved Quizzes' } },
+      '/api/v1/saved-quizzes/toggle': { post: { summary: 'Save Quiz for Later' } },
+      '/api/v1/auth/register': { post: { summary: 'Register User' } },
+      '/api/v1/auth/login': { post: { summary: 'Login' } },
+      '/api/v1/auth/clerk-sync': { post: { summary: 'Synchronize Clerk User Profile' } },
+      '/api/v1/auth/me': { get: { summary: 'Get Current User Profile' } },
+      '/api/v1/devices': { get: { summary: 'List Active Devices' } },
+      '/api/v1/devices/register': { post: { summary: 'Register Active Device' } },
+      '/api/v1/orders': { get: { summary: 'List Orders' }, post: { summary: 'Create Paid Quiz Order' } },
+      '/api/v1/payments/verify': { post: { summary: 'Verify Payment & Unlock Access' } },
+      '/api/v1/quiz-access/{quizId}': { get: { summary: 'Check Quiz Access Status' } },
+      '/api/v1/leaderboards/{quizId}': { get: { summary: 'Get Quiz Leaderboard' } },
+      '/api/v1/badges': { get: { summary: 'List All Badges' } },
+      '/api/v1/badges/my': { get: { summary: 'Get User Earned Badges' } },
+      '/api/v1/internal/quiz-scoring-keys': { post: { summary: 'Fetch Quiz Authoritative Scoring Keys' } },
     },
   });
 });
 
-// Helper to extract token and clerk userId
-const getAuthContext = (c: any) => {
+// Helper to resolve verified authenticated user from Bearer token (JWT or Clerk)
+async function resolveRequestAuth(c: any) {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
-  const clerkUserId = c.req.header('X-Clerk-User-Id') || (token.startsWith('user_') ? token : '');
   const correlationId = c.req.header('X-Correlation-ID') || `corr_${Date.now()}`;
-  return { token, clerkUserId, correlationId };
+  if (!token) {
+    return { token: '', userId: '', userRole: undefined, correlationId };
+  }
+  const user = await resolveAuthenticatedUser({
+    token,
+    env: c.env,
+    executionCtx: getExecutionCtx(c),
+  });
+  return {
+    token,
+    userId: user?.id || '',
+    userRole: user?.role,
+    correlationId,
+  };
+}
+
+function normalizeServicePath(rawPath: string): string {
+  return rawPath.replace(/^\/api\/v1/, '').replace(/\/+$/, '') || '/';
+}
+
+async function parseJsonBody(c: any) {
+  if (c.req.method === 'GET' || c.req.method === 'HEAD' || c.req.method === 'DELETE') {
+    return undefined;
+  }
+  return c.req.json().catch(() => ({}));
+}
+
+// ============================================================================
+// ATTEMPT, OFFLINE SYNC, BOOKMARKS & SAVED QUIZZES ROUTES
+// ============================================================================
+const forwardToAttemptService = async (c: any) => {
+  const { userId, userRole, correlationId } = await resolveRequestAuth(c);
+  const res = await attemptService.handle({
+    path: normalizeServicePath(c.req.path),
+    method: c.req.method,
+    body: await parseJsonBody(c),
+    correlationId,
+    userId,
+    userRole,
+    env: c.env,
+  });
+  return c.json(res.data, res.status as any);
 };
 
-app.all('/api/v1/attempts/*', async (c) => {
-  const { token, clerkUserId, correlationId } = getAuthContext(c);
-  const res = await attemptService.handle({
-    path: c.req.path.replace('/api/v1', ''),
+app.all('/api/v1/quizzes/:id/start', forwardToAttemptService);
+app.all('/api/v1/quizzes/:id/attempts', forwardToAttemptService);
+app.all('/api/v1/attempts', forwardToAttemptService);
+app.all('/api/v1/attempts/*', forwardToAttemptService);
+app.all('/api/v1/bookmarks', forwardToAttemptService);
+app.all('/api/v1/bookmarks/*', forwardToAttemptService);
+app.all('/api/v1/saved-quizzes', forwardToAttemptService);
+app.all('/api/v1/saved-quizzes/*', forwardToAttemptService);
+app.all('/api/v1/sync/*', forwardToAttemptService);
+
+// ============================================================================
+// PAYMENTS, ORDERS & QUIZ ACCESS ROUTES
+// ============================================================================
+const forwardToPaymentService = async (c: any) => {
+  const { userId, userRole, correlationId } = await resolveRequestAuth(c);
+  const res = await paymentService.handle({
+    path: normalizeServicePath(c.req.path),
     method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
+    body: await parseJsonBody(c),
     correlationId,
-    userId: clerkUserId || token,
+    userId,
+    userRole,
     env: c.env,
   });
   return c.json(res.data, res.status as any);
-});
+};
 
-app.all('/api/v1/bookmarks/*', async (c) => {
-  const res = await attemptService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
+app.all('/api/v1/orders', forwardToPaymentService);
+app.all('/api/v1/orders/*', forwardToPaymentService);
+app.all('/api/v1/payments', forwardToPaymentService);
+app.all('/api/v1/payments/*', forwardToPaymentService);
+app.all('/api/v1/webhooks/*', forwardToPaymentService);
+app.all('/api/v1/quiz-access', forwardToPaymentService);
+app.all('/api/v1/quiz-access/*', forwardToPaymentService);
+app.all('/api/v1/users/me/quiz-access', forwardToPaymentService);
 
-app.all('/api/v1/saved-quizzes/*', async (c) => {
-  const res = await attemptService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/sync/*', async (c) => {
-  const res = await attemptService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/quizzes/*/start', async (c) => {
-  const res = await attemptService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/orders/*', async (c) => {
-  const res = await paymentService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/payments/*', async (c) => {
-  const res = await paymentService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/webhooks/*', async (c) => {
-  const res = await paymentService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/quiz-access/*', async (c) => {
-  const res = await paymentService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
-
-app.all('/api/v1/leaderboards/*', async (c) => {
+// ============================================================================
+// ANALYTICS, LEADERBOARDS & BADGES ROUTES
+// ============================================================================
+const forwardToAnalyticsService = async (c: any) => {
+  const { userId, correlationId } = await resolveRequestAuth(c);
   const res = await analyticsService.handle({
-    path: c.req.path.replace('/api/v1', ''),
+    path: normalizeServicePath(c.req.path),
     method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
+    body: await parseJsonBody(c),
+    correlationId,
+    userId,
     env: c.env,
   });
   return c.json(res.data, res.status as any);
-});
+};
 
-app.all('/api/v1/badges/*', async (c) => {
-  const res = await analyticsService.handle({
-    path: c.req.path.replace('/api/v1', ''),
-    method: c.req.method,
-    body: await c.req.json().catch(() => ({})),
-    correlationId: c.req.header('X-Correlation-ID') || `corr_${Date.now()}`,
-    userId: '',
-    env: c.env,
-  });
-  return c.json(res.data, res.status as any);
-});
+app.all('/api/v1/leaderboards', forwardToAnalyticsService);
+app.all('/api/v1/leaderboards/*', forwardToAnalyticsService);
+app.all('/api/v1/badges', forwardToAnalyticsService);
+app.all('/api/v1/badges/*', forwardToAnalyticsService);
+app.all('/api/v1/users/me/badges', forwardToAnalyticsService);
 
 // 404 handler (falls back to static SPA index.html for non-API GET requests when ASSETS is bound)
 app.notFound(async (c) => {
@@ -407,6 +403,7 @@ app.notFound(async (c) => {
     c.req.path.startsWith('/health') ||
     c.req.path.startsWith('/db-health') ||
     c.req.path.startsWith('/poc/') ||
+    c.req.path.startsWith('/devices') ||
     c.req.path.startsWith('/internal/');
 
   if (!isApiPath && c.req.method === 'GET' && c.env?.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
